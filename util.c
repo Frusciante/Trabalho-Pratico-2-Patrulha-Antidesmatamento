@@ -59,7 +59,7 @@ int is_valid_int(const char* const str)
     Open and read information from the file.
     if parameter 'adj_matrix_ptr' is NULL, this function will not read edge informations
 */
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr)
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, unsigned int* city_cnt, unsigned int*** adj_matrix_ptr)
 {
     FILE* fp = NULL;
     char buffer[256];
@@ -75,10 +75,10 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     int id;
     int edge_cnt;
     int city_cnt_temp;
-    int cnt = 0;
+    unsigned int cnt = 0;
     int name_len;
     int v1, v2, w;
-    int i, j;
+    unsigned int i, j;
 
     if (!(filename && city_info_ptr && city_cnt))
     {
@@ -98,7 +98,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     city_cnt_temp = atoi(num_city_ptr);
     edge_cnt = atoi(num_edge_ptr);
     
-    if (!(city_cnt_temp && edge_cnt))
+    if (city_cnt_temp <= 0 || edge_cnt < 0)
     {
         fclose(fp);
         return 1;
@@ -215,7 +215,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         return 0;
     }
    
-    *adj_matrix_ptr = (int**)calloc(city_cnt_temp, sizeof(int*));
+    *adj_matrix_ptr = (unsigned int**)calloc(city_cnt_temp, sizeof(unsigned int*));
     if (!(*adj_matrix_ptr))
     {
         fclose(fp);
@@ -225,7 +225,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
     for (i = 0; i < city_cnt_temp; i++)
     {
-        (*adj_matrix_ptr)[i] = (int*)calloc(city_cnt_temp, sizeof(int));
+        (*adj_matrix_ptr)[i] = (unsigned int*)calloc(city_cnt_temp, sizeof(unsigned int));
         if (!(*adj_matrix_ptr)[i])
         {
             for (j = 0; j < i; j++)

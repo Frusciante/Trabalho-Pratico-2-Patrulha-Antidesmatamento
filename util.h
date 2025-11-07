@@ -12,7 +12,7 @@
 #include <ctype.h>
 #include <errno.h>
 
-#define INF 0x7FFFFFFF
+#define INF 0xFFFFFFF
 #define CITY_NAME_LEN 30
 #define FILENAME "grafo_amazonia_legal.txt" 
 
@@ -85,6 +85,6 @@ typedef struct
 
 void remove_whitespace(char* str);
 int is_valid_int(const char* const str);
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr);
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, unsigned int* city_cnt, unsigned int*** adj_matrix_ptr);
 
 #endif
