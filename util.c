@@ -38,12 +38,18 @@ int is_valid_int(const char* const str)
         return 0;
     }
 
+    if (*str_iter == '-')
+    {
+        str_iter++;
+    }
+
     while (*str_iter != '\0')
     {
         if (*str_iter < '0' && *str_iter > '9')
         {
             return 0;
         }
+        str_iter++;
     }
     
     return 1;
@@ -137,7 +143,12 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
             continue;
         }
         
+        if (!is_valid_int(type_start + 1))
+        {
+            continue;
+        }
         type = atoi(type_start + 1);
+
         if (type > 1 || type < 0)
         {
             continue;
@@ -158,6 +169,11 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         }
 
         *name_start = '\0';
+
+        if (!is_valid_int(buffer))
+        {
+            continue;
+        }
         id = atoi(buffer); 
 
         if (id < 0 || id >= city_cnt_temp)
@@ -248,7 +264,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         if (!(is_valid_int(v1_ptr) && is_valid_int(v2_ptr) && is_valid_int(w_ptr)))
         {
             continue;
-        }
+        } 
         
         v1 = atoi(v1_ptr);
         v2 = atoi(v2_ptr);
