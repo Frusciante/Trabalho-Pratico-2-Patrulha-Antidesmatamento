@@ -4,13 +4,15 @@ void remove_whitespace(char* str)
 {
     char* start = str;
     char* end;
-    
+    size_t len;
     if (!str)
     {
         return;
     }
+
+    len = strlen(start);
     
-    end = str + (strlen(str) - 1);
+    end = str + (len - 1);
     
     while (end > start && isspace((char)*end))
     {
@@ -26,7 +28,7 @@ void remove_whitespace(char* str)
 
     if (start != str)
     {
-        memmove(str, start, strlen(start) + 1);
+        memmove(str, start, len + 1);
     }
 }
 
@@ -59,7 +61,7 @@ int is_valid_int(const char* const str)
     Open and read information from the file.
     if parameter 'adj_matrix_ptr' is NULL, this function will not read edge informations
 */
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, unsigned int* city_cnt, unsigned int*** adj_matrix_ptr)
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, unsigned int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt_ptr)
 {
     FILE* fp = NULL;
     char buffer[256];
@@ -79,6 +81,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     int name_len;
     int v1, v2, w;
     unsigned int i, j;
+    int capital_cnt = 0;
+    int capital_buf[30];
 
     if (!(filename && city_info_ptr && city_cnt))
     {
@@ -200,13 +204,26 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         (*city_info_ptr)[id].id_cidade = id;
         (*city_info_ptr)[id].eh_capital = type;
+        if (type == 1)
+        {
+            (*city_info_ptr)[id].drone_disponivel = 1;
+            capital_buf[capital_cnt] = id;
+            capital_cnt++;
+        }
     }
 
-    if (cnt < city_cnt_temp)
+    if (cnt < city_cnt_temp || capital_cnt == 0)
     {
         fclose(fp);
         free(*city_info_ptr);
         return 1;
+    }
+    
+    *capitals_ptr = (int*)calloc(capital_cnt, sizeof(int));
+    *capital_cnt_ptr = capital_cnt;
+    for (i = 0; i < capital_cnt; i++)
+    {
+        (*capitals_ptr)[i] = capital_buf[i];
     }
     
     if (!adj_matrix_ptr)

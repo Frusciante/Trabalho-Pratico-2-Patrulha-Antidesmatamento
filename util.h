@@ -11,11 +11,17 @@
 #include <stdlib.h>
 #include <ctype.h>
 #include <errno.h>
+#include <signal.h>
+#include <sys/time.h>
+#include <time.h>
 
-#define INF 0xFFFFFFF
+#define INF 0xFFFFFFFF
 #define CITY_NAME_LEN 30
+#define UDP_TIMEOUT_CLIENT 5 
+#define UDP_TIMEOUT_SERVER 2 
+#define SEND_TERM 30
+#define SERV_PORT 8080
 #define FILENAME "grafo_amazonia_legal.txt" 
-
 
 typedef enum
 {
@@ -80,11 +86,15 @@ typedef struct
 {
     int id_cidade;
     int eh_capital;
+    int drone_disponivel; 
     char nome_cidade[CITY_NAME_LEN]; 
+    int status;
+    int equipe_atuando;
+    time_t evento_timestamp;
 } info_cidade_t;
 
 void remove_whitespace(char* str);
 int is_valid_int(const char* const str);
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, unsigned int* city_cnt, unsigned int*** adj_matrix_ptr);
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, unsigned int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt);
 
 #endif
