@@ -25,7 +25,7 @@ static void update_info_cidade(const telemetria_t* const info_telemetria, info_c
 /*
     A function fills 'output_arr' with shortest distances from 'vertex' to all other vertices.
 */
-static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned* output_arr, int* visited_arr, int num_vertices)
+static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned int* output_arr, int* visited_arr, int num_vertices)
 {
     int i, j;
     unsigned int closest = INF;
@@ -38,6 +38,7 @@ static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned*
     }
     
     memset(visited_arr, 0, num_vertices * sizeof(int));
+    memset(output_arr, INF, num_vertices * sizeof(int));
     visited_arr[vertex] = 1;
     
     for (i = 0; i < num_vertices; i++)
@@ -91,6 +92,8 @@ int main(void)
 {
     int** adj_matrix;
     info_cidade_t* city_info;
+    unsigned int* dist_list;
+    int* visited;
     int* capitals;
     int city_cnt;
     int capital_cnt;
@@ -116,13 +119,13 @@ int main(void)
     signal(SIGINT, sig_handler);
 
     get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt);
-    unsigned int* dist_list = (unsigned int*)malloc(city_cnt * sizeof(unsigned int));
+    dist_list = (unsigned int*)malloc(city_cnt * sizeof(unsigned int));
     if (!dist_list)
     {
         return 1;
     }
     
-    int* visited = (int*)malloc(city_cnt * sizeof(int));
+    visited = (int*)malloc(city_cnt * sizeof(int));
     if (!visited)
     {
         return 1;
@@ -240,8 +243,6 @@ int main(void)
                 // error handling
             }
             break;
-        default:
-            continue;
         }
     }
 
