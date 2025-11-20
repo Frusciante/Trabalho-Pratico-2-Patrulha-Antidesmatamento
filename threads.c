@@ -13,9 +13,12 @@ void* thread_monitoring_simulator(void* arg)
     while (is_running)
     {
         pthread_mutex_lock(&city_info_mutex); 
-        for (i = 0; i < city_cnt; ++i) if (rand() % 100 < 3)    
+        for (i = 0; i < city_cnt; ++i)     
         {
-            city_info[i].status = ALERTA;
+            if (rand() % 100 < 3)
+            {
+                city_info[i].status = ALERTA;
+            }
         }
         pthread_mutex_unlock(&city_info_mutex);
         sleep(SLEEP_TIME);
