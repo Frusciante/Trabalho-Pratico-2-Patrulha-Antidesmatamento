@@ -21,7 +21,9 @@
 #define UDP_TIMEOUT_SERVER 2 
 #define SEND_TERM 30
 #define SERV_PORT 8080
+#define SERV_IP "127.0.0.1" 
 #define FILENAME "grafo_amazonia_legal.txt" 
+#define THREAD_CNT 4
 
 typedef enum
 {
