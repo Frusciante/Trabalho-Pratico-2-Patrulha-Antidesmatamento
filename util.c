@@ -59,7 +59,7 @@ int is_valid_int(const char* const str)
 
 /*
     Open and read information from the file.
-    if parameter 'adj_matrix_ptr' is NULL, this function will not read edge informations
+    if parameters, 'capitals_ptr' or 'city_info_ptr' are NULL, this function will not fill these pointers. 
 */
 int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, unsigned int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt_ptr)
 {
@@ -219,13 +219,16 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         return 1;
     }
     
-    *capitals_ptr = (int*)calloc(capital_cnt, sizeof(int));
-    *capital_cnt_ptr = capital_cnt;
-    for (i = 0; i < capital_cnt; i++)
+    if (capitals_ptr && capital_cnt_ptr)
     {
-        (*capitals_ptr)[i] = capital_buf[i];
+        *capitals_ptr = (int *)calloc(capital_cnt, sizeof(int));
+        *capital_cnt_ptr = capital_cnt;
+        for (i = 0; i < capital_cnt; i++)
+        {
+            (*capitals_ptr)[i] = capital_buf[i];
+        }
     }
-    
+
     if (!adj_matrix_ptr)
     {
         fclose(fp);

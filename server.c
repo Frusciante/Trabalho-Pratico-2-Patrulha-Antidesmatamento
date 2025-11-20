@@ -246,6 +246,9 @@ int main(void)
         }
     }
 
+    close(sock);
+    free(visited);
+    free(dist_list);
     free(city_info);
     for (i = 0; i < city_cnt; i++)
     {

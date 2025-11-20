@@ -1,7 +1,9 @@
-#include "util.h"
 #include "threads.h"
 
 int is_running;
+info_cidade_t* city_info;
+int city_cnt;
+pthread_mutex_t city_info_mutex;
 
 static void sig_handler(int sig)
 {
@@ -12,10 +14,17 @@ int main(void)
 {
     pthread_t threads[THREAD_CNT] = {};
     int i;
+    
+    pthread_mutex_init(&city_info_mutex, NULL);
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
     
+    if (get_info_from_file(FILENAME, &city_info, &city_cnt, NULL, NULL, NULL))
+    {
+        return 1;
+    }
+
     is_running = 1;
 
     if (
@@ -32,6 +41,7 @@ int main(void)
     {
         pthread_join(threads[i], NULL);
     }
+    pthread_mutex_destroy(&city_info_mutex);
 
     return 0;
 }
