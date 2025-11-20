@@ -166,7 +166,9 @@ int main(void)
         switch (header_ptr->tipo)
         {
         case MSG_TELEMETRIA:
-            update_info_cidade((telemetria_t *)(recv_buf + sizeof(header_t)), city_info, city_cnt);
+            telemetria_ptr = (payload_telemetria_t*)(recv_buf + sizeof(header_t));
+            update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
+
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
             header_ptr = (header_t *)send_buf;
             header_ptr->tamanho = sizeof(payload_ack_t);
