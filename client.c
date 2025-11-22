@@ -1,9 +1,13 @@
 #include "threads.h"
 
 int is_running;
-info_cidade_t* city_info;
 int city_cnt;
+int sock;
 pthread_mutex_t city_info_mutex;
+pthread_mutex_t drone_mutex;
+pthread_mutex_t ack_mutex;
+pthread_cond_t ack_cond;
+info_cidade_t* city_info;
 
 static void sig_handler(int sig)
 {
@@ -13,9 +17,20 @@ static void sig_handler(int sig)
 int main(void)
 {
     pthread_t threads[THREAD_CNT] = {};
+    struct sockaddr_in serv_addr = {};
     int i;
     
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = SERV_PORT;
+    if (1 != inet_pton(AF_INET, SERV_IP, &(serv_addr.sin_addr)))
+    { 
+        return 1;
+    }
+    
     pthread_mutex_init(&city_info_mutex, NULL);
+    pthread_mutex_init(&drone_mutex, NULL);
+    pthread_mutex_init(&ack_mutex, NULL);
+    pthread_cond_init(&ack_cond, NULL);
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
@@ -26,12 +41,12 @@ int main(void)
     }
 
     is_running = 1;
-
+    sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (
         pthread_create(&threads[0], NULL, thread_monitoring_simulator, NULL) ||
-        pthread_create(&threads[1], NULL, thread_telemetry_sender, NULL) ||
-        pthread_create(&threads[2], NULL, thread_drone_team_msg_receiver, NULL) ||
-        pthread_create(&threads[3], NULL, thread_drone_team_action_simulator, NULL)
+        pthread_create(&threads[1], NULL, thread_telemetry_sender, (void*)&serv_addr) ||
+        pthread_create(&threads[2], NULL, thread_msg_receiver, (void*)&serv_addr) ||
+        pthread_create(&threads[3], NULL, thread_drone_team_action_simulator, (void*)&serv_addr)
     )
     {
         return 1;
@@ -41,7 +56,14 @@ int main(void)
     {
         pthread_join(threads[i], NULL);
     }
+
     pthread_mutex_destroy(&city_info_mutex);
+    pthread_mutex_destroy(&drone_mutex);
+    pthread_mutex_destroy(&ack_mutex);
+    pthread_cond_destroy(&ack_cond);
+
+    close(sock);
+    free(city_info);
 
     return 0;
 }

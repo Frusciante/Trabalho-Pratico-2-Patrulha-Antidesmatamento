@@ -5,6 +5,7 @@ static int is_running;
 void sig_handler(int sig)
 {
     is_running = 0;
+    raise(SIGALRM);
 }
 
 static void update_info_cidade(const telemetria_t* const info_telemetria, info_cidade_t* info_cidade, int city_cnt)
@@ -117,6 +118,7 @@ int main(void)
     
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
+    srand(time(NULL));
 
     get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt);
     dist_list = (unsigned int*)malloc(city_cnt * sizeof(unsigned int));
@@ -204,7 +206,7 @@ int main(void)
                     total_size = sizeof(header_t) + sizeof(payload_equipe_drone_t);
                     header_ptr = ((header_t *)send_buf);
                     header_ptr->tamanho = sizeof(payload_equipe_drone_t);
-                    header_ptr->tipo = MSG_EQUIPE_DE_DRONES;
+                    header_ptr->tipo = MSG_EQUIPE_DRONE;
                     equipte_drone_ptr = (payload_equipe_drone_t *)(send_buf + sizeof(header_t));
                     equipte_drone_ptr->id_cidade = i;
                     equipte_drone_ptr->id_equipe = min_idx;
