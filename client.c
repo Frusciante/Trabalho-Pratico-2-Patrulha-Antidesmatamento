@@ -15,6 +15,9 @@ info_cidade_t* city_info;
 static void sig_handler(int sig)
 {
     is_running = 0;
+    pthread_cond_broadcast(&ack_cond);
+    pthread_cond_broadcast(&conclusao_cond);
+    pthread_cond_broadcast(&drone_cond);
 }
 
 int main(void)

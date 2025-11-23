@@ -84,6 +84,12 @@ void* thread_msg_receiver(void* arg)
     payload_ack_t* payload_send = (payload_ack_t*)(send_buf + sizeof(header_t));
     payload_equipe_drone_t* payload_recv = (payload_equipe_drone_t*)(recv_buf + sizeof(header_t));
     event_queue* temp_event = NULL;
+    struct timeval tv = {1, 0};
+    
+    if (0 > setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
+    {
+        // error handling 
+    }
 
     while (is_running)
     {
