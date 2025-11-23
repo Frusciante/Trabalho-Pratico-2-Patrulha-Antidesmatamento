@@ -43,9 +43,14 @@ void* thread_telemetry_sender(void* arg)
 {
     int i;
     char send_buf[sizeof(header_t) + sizeof(payload_telemetria_t)];
-    header_t* header = (header_t*)send_buf;
-    payload_telemetria_t* payload = (payload_telemetria_t*)(send_buf + sizeof(header_t));
-    struct sockaddr_in* serv_addr = (struct sockaddr_in*)arg;
+    header_t* const header = (header_t*)send_buf;
+    payload_telemetria_t* const payload = (payload_telemetria_t*)(send_buf + sizeof(header_t));
+    const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
+    
+    if (!arg)
+    {
+        return (void*)1;
+    }
     
     header->tamanho = sizeof(payload_telemetria_t);
     header->tipo = MSG_TELEMETRIA;
@@ -77,14 +82,19 @@ void* thread_msg_receiver(void* arg)
     char send_buf[sizeof(header_t) + sizeof(payload_equipe_drone_t)] = {};
     char recv_buf[sizeof(header_t) + sizeof(payload_ack_t)] = {};
     struct sockaddr_in recv_addr = {};
-    struct sockaddr_in* serv_addr = (struct sockaddr_in*)arg;
+    const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
     socklen_t recv_addr_len;
-    header_t* header_send = (header_t*)send_buf;
-    header_t* header_recv = (header_t*)recv_buf;
-    payload_ack_t* payload_send = (payload_ack_t*)(send_buf + sizeof(header_t));
-    payload_equipe_drone_t* payload_recv = (payload_equipe_drone_t*)(recv_buf + sizeof(header_t));
+    header_t* const header_send = (header_t*)send_buf;
+    const header_t* const header_recv = (header_t*)recv_buf;
+    payload_ack_t* const payload_send = (payload_ack_t*)(send_buf + sizeof(header_t));
+    const payload_equipe_drone_t* const payload_recv = (payload_equipe_drone_t*)(recv_buf + sizeof(header_t));
     event_queue* temp_event = NULL;
-    struct timeval tv = {1, 0};
+    const struct timeval tv = {1, 0};
+    
+    if (!arg)
+    {
+        return (void*)1;
+    }
     
     if (0 > setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
     {
@@ -162,9 +172,15 @@ void* thread_msg_receiver(void* arg)
 void* thread_drone_team_action_simulator(void* arg)
 {
     char send_buf[sizeof(header_t) + sizeof(payload_conclusao_t)];
-    struct sockaddr_in* serv_addr = (struct sockaddr_in*)arg;
-    payload_conclusao_t* payload_send = (payload_conclusao_t*)(send_buf + sizeof(header_t)); 
+    const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
+    header_t* const header_send = (header_t*)send_buf;
+    payload_conclusao_t* const payload_send = (payload_conclusao_t*)(send_buf + sizeof(header_t)); 
     struct event_queue* temp = NULL;
+    
+    if (!arg)
+    {
+        return (void*)1;
+    }
     
     while (is_running)
     {
@@ -179,7 +195,7 @@ void* thread_drone_team_action_simulator(void* arg)
             pthread_mutex_unlock(&drone_mutex);
             break;
         }
-
+        
         payload_send->id_cidade = events_head->id_cidade;
         payload_send->id_equipe = events_head->id_equipe;
         temp = events_head;
@@ -191,9 +207,10 @@ void* thread_drone_team_action_simulator(void* arg)
         }
         pthread_mutex_unlock(&drone_mutex);
         
+        header_send->tamanho = sizeof(payload_conclusao_t);
+        header_send->tipo = MSG_CONCLUSAO;
         sleep((rand() % (SLEEP_TIME - 1)) + 1);
 
-        
         sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), &ack_conclusao_mutex, &conclusao_cond, &ack_conclusao_received, UDP_TIMEOUT_CLIENT, &is_running);
 
     }

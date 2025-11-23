@@ -103,16 +103,18 @@ int main(void)
     struct sockaddr_in serv_addr = {};
     struct sockaddr_in clnt_addr = {};
     socklen_t clnt_addr_len;
+    ssize_t size_received = 0;
     char recv_buf[512];
     char send_buf[512];
     size_t total_size;
     struct timeval tv = {1, 0};
-    header_t* header_ptr = NULL;
-    ssize_t size_received = 0;
-    payload_ack_t* ack_ptr;
-    payload_conclusao_t* conclusao_ptr;
-    payload_equipe_drone_t* equipte_drone_ptr;
-    payload_telemetria_t* telemetria_ptr;
+    header_t* const header_ptr_send = (header_t*)send_buf;
+    const header_t* const header_ptr_recv = (header_t*)recv_buf;
+    payload_ack_t* const ack_ptr_send = (payload_ack_t*)(send_buf + sizeof(header_t));
+    const payload_ack_t* const ack_ptr_recv = (payload_ack_t*)(recv_buf + sizeof(header_t));
+    const payload_conclusao_t* const conclusao_ptr = (payload_conclusao_t*)(recv_buf + sizeof(header_t));
+    payload_equipe_drone_t* const equipe_drone_ptr = (payload_equipe_drone_t*)(send_buf + sizeof(header_t));
+    const payload_telemetria_t* const telemetria_ptr = (payload_telemetria_t*)(recv_buf + sizeof(header_t));
     
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
@@ -157,24 +159,20 @@ int main(void)
             continue;
         }
 
-        header_ptr = (header_t*)recv_buf;
-        if (size_received != header_ptr->tamanho + sizeof(header_t))
+        if (size_received != header_ptr_recv->tamanho + sizeof(header_t))
         {
             continue;
         }
 
-        switch (header_ptr->tipo)
+        switch (header_ptr_recv->tipo)
         {
         case MSG_TELEMETRIA:
-            telemetria_ptr = (payload_telemetria_t*)(recv_buf + sizeof(header_t));
             update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
 
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
-            header_ptr = (header_t *)send_buf;
-            header_ptr->tamanho = sizeof(payload_ack_t);
-            header_ptr->tipo = MSG_ACK;
-            ack_ptr = ((payload_ack_t *)(send_buf + sizeof(header_t)));
-            ack_ptr->status = ACK_TELEMETRIA;
+            header_ptr_send->tamanho = sizeof(payload_ack_t);
+            header_ptr_send->tipo = MSG_ACK;
+            ack_ptr_send->status = ACK_TELEMETRIA;
 
             if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
@@ -202,23 +200,19 @@ int main(void)
                         continue;
                     }
                     total_size = sizeof(header_t) + sizeof(payload_equipe_drone_t);
-                    header_ptr = ((header_t *)send_buf);
-                    header_ptr->tamanho = sizeof(payload_equipe_drone_t);
-                    header_ptr->tipo = MSG_EQUIPE_DRONE;
-                    equipte_drone_ptr = (payload_equipe_drone_t *)(send_buf + sizeof(header_t));
-                    equipte_drone_ptr->id_cidade = i;
-                    equipte_drone_ptr->id_equipe = min_idx;
+                    header_ptr_send->tamanho = sizeof(payload_equipe_drone_t);
+                    header_ptr_send->tipo = MSG_EQUIPE_DRONE;
+                    equipe_drone_ptr->id_cidade = i;
+                    equipe_drone_ptr->id_equipe = min_idx;
                     if (-1 == sendto(sock, send_buf, total_size, 0, &clnt_addr, clnt_addr_len))
                     {
                         // error handling
                     }
 
                     size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
-                    header_ptr = (header_t*)recv_buf;
-                    if (size_received == sizeof(header_t) + sizeof(payload_ack_t) && header_ptr->tipo == MSG_ACK)
+                    if (size_received == sizeof(header_t) + sizeof(payload_ack_t) && header_ptr_recv->tipo == MSG_ACK)
                     {
-                        ack_ptr = (payload_ack_t*)(recv_buf + sizeof(header_t));
-                        if (ack_ptr->status == ACK_EQUIPE_DRONE)
+                        if (ack_ptr_recv->status == ACK_EQUIPE_DRONE)
                         {
                             city_info[i].evento_timestamp = time(NULL);
                             city_info[i].equipe_atuando = 1;
@@ -229,15 +223,12 @@ int main(void)
             }
             break;
         case MSG_CONCLUSAO:
-            conclusao_ptr = (payload_conclusao_t *)(recv_buf + sizeof(header_t));
             city_info[conclusao_ptr->id_cidade].evento_timestamp = 0;
             city_info[conclusao_ptr->id_equipe].drone_disponivel = 1;
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
-            header_ptr = (header_t *)send_buf;
-            header_ptr->tamanho = sizeof(payload_ack_t);
-            header_ptr->tipo = MSG_ACK;
-            ack_ptr = ((payload_ack_t *)(send_buf + sizeof(header_t)));
-            ack_ptr->status = ACK_CONCLUSAO;
+            header_ptr_send->tamanho = sizeof(payload_ack_t);
+            header_ptr_send->tipo = MSG_ACK;
+            ack_ptr_send->status = ACK_CONCLUSAO;
             if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
                 // error handling
