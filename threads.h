@@ -1,5 +1,5 @@
 #ifndef _THREADS_H
-#define _THREADS_Ho
+#define _THREADS_H
 #define _GNU_SOURCE
 
 #include <pthread.h>

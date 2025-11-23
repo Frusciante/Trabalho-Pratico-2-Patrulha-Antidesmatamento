@@ -11,6 +11,10 @@ void remove_whitespace(char* str)
     }
 
     len = strlen(start);
+    if (len < 1)
+    {
+        return;
+    }
     
     end = str + (len - 1);
     
@@ -69,9 +73,9 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     char* num_city_ptr = NULL;
     char* num_edge_ptr = NULL;
     char* type_start = NULL;
-    char* v1_ptr;
-    char* v2_ptr;
-    char* w_ptr;
+    char* v1_ptr = NULL;
+    char* v2_ptr = NULL;
+    char* w_ptr = NULL;
     int len;
     int type;
     int id;
@@ -82,7 +86,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     int v1, v2, w;
     unsigned int i, j;
     int capital_cnt = 0;
-    int capital_buf[30];
+    int* capital_buf;
 
     if (!(filename && city_info_ptr && city_cnt))
     {
@@ -116,6 +120,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         fclose(fp);
         return 1;
     }
+
+    capital_buf = (int*)calloc(city_cnt_temp, sizeof(int));
 
     for (i = 0; i < city_cnt_temp; i++)
     {
@@ -184,6 +190,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fclose(fp);
             free(*city_info_ptr);
+            free(capital_buf);
             return 1;
         }
 
@@ -191,6 +198,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fclose(fp);
             free(*city_info_ptr);
+            free(capital_buf);
             return 1;
         }
 
@@ -216,6 +224,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     {
         fclose(fp);
         free(*city_info_ptr);
+        free(capital_buf);
         return 1;
     }
     
@@ -231,6 +240,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
     if (!adj_matrix_ptr)
     {
+        free(capital_buf);
         fclose(fp);
         return 0;
     }
@@ -239,6 +249,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     if (!(*adj_matrix_ptr))
     {
         fclose(fp);
+        free(capital_buf);
         free(*city_info_ptr);
         return 1;
     }
@@ -254,6 +265,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
             }
             free(*adj_matrix_ptr);
             free(*city_info_ptr);
+            free(capital_buf);
             fclose(fp);
             return 1;
         }
@@ -306,6 +318,43 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         // warning
     }
 
+    free(capital_buf);
+
     fclose(fp);
     return 0;
+}
+
+
+int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr)
+{
+    int cnt = 0;
+    int is_okay = 0;
+    struct timespec ts = {};
+    int check_timeout;
+    
+    if (!(buf && addr && cond && mutex && ack_flag))
+    {
+        return is_okay;
+    }
+
+    while (*is_running_ptr && (++cnt <= 3 && is_okay == 0))
+    {
+        sendto(sock, buf, len, 0, (struct sockaddr *)addr, addr_len);
+        clock_gettime(CLOCK_REALTIME, &ts);
+        ts.tv_sec += timeout;
+        check_timeout = 0;
+        pthread_mutex_lock(mutex);
+        while (*ack_flag == 0 && check_timeout != ETIMEDOUT)
+        {
+            check_timeout = pthread_cond_timedwait(cond, mutex, &ts);
+        }
+        if (*ack_flag)
+        {
+            *ack_flag = 0;
+            is_okay = 1;
+        }
+        pthread_mutex_unlock(mutex);
+    }
+    
+    return is_okay;
 }

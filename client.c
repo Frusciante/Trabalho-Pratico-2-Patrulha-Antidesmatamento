@@ -5,8 +5,11 @@ int city_cnt;
 int sock;
 pthread_mutex_t city_info_mutex;
 pthread_mutex_t drone_mutex;
-pthread_mutex_t ack_mutex;
+pthread_mutex_t ack_telemetria_mutex;
+pthread_mutex_t ack_conclusao_mutex;
+pthread_cond_t drone_cond;
 pthread_cond_t ack_cond;
+pthread_cond_t conclusao_cond;
 info_cidade_t* city_info;
 
 static void sig_handler(int sig)
@@ -21,7 +24,7 @@ int main(void)
     int i;
     
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = SERV_PORT;
+    serv_addr.sin_port = htons(SERV_PORT);
     if (1 != inet_pton(AF_INET, SERV_IP, &(serv_addr.sin_addr)))
     { 
         return 1;
@@ -29,8 +32,11 @@ int main(void)
     
     pthread_mutex_init(&city_info_mutex, NULL);
     pthread_mutex_init(&drone_mutex, NULL);
-    pthread_mutex_init(&ack_mutex, NULL);
+    pthread_mutex_init(&ack_telemetria_mutex, NULL);
+    pthread_mutex_init(&ack_conclusao_mutex, NULL);
     pthread_cond_init(&ack_cond, NULL);
+    pthread_cond_init(&drone_cond, NULL);
+    pthread_cond_init(&conclusao_cond, NULL);
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
@@ -42,6 +48,12 @@ int main(void)
 
     is_running = 1;
     sock = socket(AF_INET, SOCK_DGRAM, 0);
+    
+    if (sock < 3)
+    {
+        return 1;
+    }
+
     if (
         pthread_create(&threads[0], NULL, thread_monitoring_simulator, NULL) ||
         pthread_create(&threads[1], NULL, thread_telemetry_sender, (void*)&serv_addr) ||
@@ -59,8 +71,11 @@ int main(void)
 
     pthread_mutex_destroy(&city_info_mutex);
     pthread_mutex_destroy(&drone_mutex);
-    pthread_mutex_destroy(&ack_mutex);
+    pthread_mutex_destroy(&ack_telemetria_mutex);
+    pthread_mutex_destroy(&ack_conclusao_mutex);
+    pthread_cond_destroy(&drone_cond);
     pthread_cond_destroy(&ack_cond);
+    pthread_cond_destroy(&conclusao_cond);
 
     close(sock);
     free(city_info);

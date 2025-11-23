@@ -10,7 +10,7 @@ void sig_handler(int sig)
 
 static void update_info_cidade(const telemetria_t* const info_telemetria, info_cidade_t* info_cidade, int city_cnt)
 {
-    int i, id;
+    int i;
     if (!(info_telemetria && info_cidade))
     {
         return;
@@ -18,8 +18,8 @@ static void update_info_cidade(const telemetria_t* const info_telemetria, info_c
 
     for (i = 0; i < city_cnt; i++)
     {
-        id = info_telemetria[i].id_cidade;
-        info_cidade[id].status = info_telemetria[i].status;
+        info_cidade[i].id_cidade = info_telemetria[i].id_cidade;
+        info_cidade[i].status = info_telemetria[i].status;
     }
 }
 
@@ -91,7 +91,7 @@ static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned 
 
 int main(void)
 {
-    int** adj_matrix;
+    unsigned int** adj_matrix;
     info_cidade_t* city_info;
     unsigned int* dist_list;
     int* visited;
@@ -109,7 +109,6 @@ int main(void)
     size_t total_size;
     struct timeval tv = {};
     header_t* header_ptr = NULL;
-    payload_ack_t* ack = NULL;
     ssize_t size_received = 0;
     payload_ack_t* ack_ptr;
     payload_conclusao_t* conclusao_ptr;
@@ -134,7 +133,7 @@ int main(void)
     }
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
-    if (socket < 3)
+    if (sock < 3)
     {
         return 1;
     }
@@ -187,7 +186,7 @@ int main(void)
             {
                 if (city_info[i].status == ALERTA && city_info[i].equipe_atuando == 0)
                 {
-                    dijkstra(i, adj_matrix, dist_list, visited, city_cnt);
+                    dijkstra(i, (const unsigned int** const)adj_matrix, dist_list, visited, city_cnt);
                     min = 0x7FFFFFFF;
                     min_idx = -1;
                     for (j = 0; j < capital_cnt; j++)

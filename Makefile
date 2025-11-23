@@ -10,7 +10,7 @@ all: $(EXE_SERVER) $(EXE_CLIENT)
 $(EXE_SERVER): server.c util.c
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
-$(EXE_CLIENT): client.c thread.c util.c
+$(EXE_CLIENT): client.c threads.c util.c
 	$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 clean:
