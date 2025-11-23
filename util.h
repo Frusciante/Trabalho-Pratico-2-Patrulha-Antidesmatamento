@@ -20,7 +20,7 @@
 #define INF 0xFFFFFFFF
 #define CITY_NAME_LEN 30
 #define UDP_TIMEOUT_CLIENT 5 
-#define UDP_TIMEOUT_SERVER 2 
+#define UDP_TIMEOUT_SERVER 1 
 #define SLEEP_TIME 30
 #define SERV_PORT 8080
 #define SERV_IP "127.0.0.1" 

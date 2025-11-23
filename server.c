@@ -5,7 +5,6 @@ static int is_running;
 void sig_handler(int sig)
 {
     is_running = 0;
-    raise(SIGALRM);
 }
 
 static void update_info_cidade(const telemetria_t* const info_telemetria, info_cidade_t* info_cidade, int city_cnt)
@@ -107,7 +106,7 @@ int main(void)
     char recv_buf[512];
     char send_buf[512];
     size_t total_size;
-    struct timeval tv = {};
+    struct timeval tv = {1, 0};
     header_t* header_ptr = NULL;
     ssize_t size_received = 0;
     payload_ack_t* ack_ptr;
@@ -148,10 +147,10 @@ int main(void)
         return 1;
     }
 
+    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+
     while (is_running)
     {
-        tv.tv_sec = 0;
-        setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
         size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&clnt_addr, &clnt_addr_len);
         if (size_received < sizeof(header_t))
         {
@@ -214,11 +213,9 @@ int main(void)
                         // error handling
                     }
 
-                    tv.tv_sec = UDP_TIMEOUT_SERVER;
-                    setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
                     size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
                     header_ptr = (header_t*)recv_buf;
-                    if (size_received > sizeof(header_t) && (size_received == header_ptr->tamanho + sizeof(header_t)) && header_ptr->tipo == MSG_ACK)
+                    if (size_received == sizeof(header_t) + sizeof(payload_ack_t) && header_ptr->tipo == MSG_ACK)
                     {
                         ack_ptr = (payload_ack_t*)(recv_buf + sizeof(header_t));
                         if (ack_ptr->status == ACK_EQUIPE_DRONE)
