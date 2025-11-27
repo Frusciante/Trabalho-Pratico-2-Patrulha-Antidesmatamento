@@ -164,6 +164,7 @@ int main(void)
 
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
 
+    printf("Servidor escutando na porta %d...\n", SERV_PORT);
     while (is_running)
     {
         size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&clnt_addr, &clnt_addr_len);
@@ -180,6 +181,7 @@ int main(void)
         switch (header_ptr_recv->tipo)
         {
         case MSG_TELEMETRIA:
+            printf("[TELEMETRIA RECEBIDA]\nTotal de cidades monitoradas: %d\n", telemetria_ptr->total);
             update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
 
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
@@ -196,7 +198,7 @@ int main(void)
             {
                 if (city_info[i].status == ALERTA && city_info[i].equipe_atuando == 0)
                 {
-                    dijkstra(i, (const unsigned int** const)adj_matrix, dist_list, visited, city_cnt);
+                    dijkstra(i, (const int** const)adj_matrix, dist_list, visited, city_cnt);
                     min = 0x7FFFFFFF;
                     min_idx = -1;
                     for (j = 0; j < capital_cnt; j++)

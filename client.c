@@ -33,13 +33,24 @@ int main(void)
         return 1;
     }
     
-    pthread_mutex_init(&city_info_mutex, NULL);
-    pthread_mutex_init(&drone_mutex, NULL);
-    pthread_mutex_init(&ack_telemetria_mutex, NULL);
-    pthread_mutex_init(&ack_conclusao_mutex, NULL);
-    pthread_cond_init(&ack_cond, NULL);
-    pthread_cond_init(&drone_cond, NULL);
-    pthread_cond_init(&conclusao_cond, NULL);
+    if (
+    pthread_mutex_init(&city_info_mutex, NULL) ||
+    pthread_mutex_init(&drone_mutex, NULL) ||
+    pthread_mutex_init(&ack_telemetria_mutex, NULL) ||
+    pthread_mutex_init(&ack_conclusao_mutex, NULL)
+    )
+    {
+        fprintf("pthread_mutex_init() error (%d), %s:%d", strerror(errno), __func__, __LINE__);
+    }
+
+    if (
+    pthread_cond_init(&ack_cond, NULL) ||
+    pthread_cond_init(&drone_cond, NULL) ||
+    pthread_cond_init(&conclusao_cond, NULL)
+    )
+    {
+        fprintf("pthread_cond_init() error (%d), %s:%d", strerror(errno), __func__, __LINE__);
+    }
 
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
