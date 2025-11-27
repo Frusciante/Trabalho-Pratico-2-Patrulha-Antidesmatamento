@@ -16,6 +16,7 @@
 #include <sys/time.h>
 #include <time.h>
 #include <pthread.h>
+#include <errno.h>
 
 #define INF 0xFFFFFFFF
 #define CITY_NAME_LEN 30
