@@ -49,11 +49,9 @@ void* thread_telemetry_sender(void* arg)
     
     if (!arg)
     {
+        fprintf(stderr, "Wrong thread argument, %s:%d\n", __func__, __LINE__);
         return (void*)1;
     }
-    
-    header->tamanho = sizeof(payload_telemetria_t);
-    header->tipo = MSG_TELEMETRIA;
 
     while (is_running)
     {
@@ -93,12 +91,13 @@ void* thread_msg_receiver(void* arg)
     
     if (!arg)
     {
+        fprintf(stderr, "Wrong thread argument, %s:%d\n", __func__, __LINE__);
         return (void*)1;
     }
     
     if (0 > setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
     {
-        // error handling 
+        fprintf(stderr, "setsockopt() error (%s), %s:%d", strerror(errno), __func__, __LINE__);
     }
 
     while (is_running)
@@ -179,6 +178,7 @@ void* thread_drone_team_action_simulator(void* arg)
     
     if (!arg)
     {
+        fprintf(stderr, "Wrong thread argument, %s:%d\n", __func__, __LINE__);
         return (void*)1;
     }
     

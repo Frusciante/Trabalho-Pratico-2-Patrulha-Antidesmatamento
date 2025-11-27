@@ -65,7 +65,7 @@ int is_valid_int(const char* const str)
     Open and read information from the file.
     if parameters, 'capitals_ptr' or 'city_info_ptr' are NULL, this function will not fill these pointers. 
 */
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, unsigned int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt_ptr)
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt_ptr)
 {
     FILE* fp = NULL;
     char buffer[256];
@@ -81,10 +81,10 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     int id;
     int edge_cnt;
     int city_cnt_temp;
-    unsigned int cnt = 0;
+    int cnt = 0;
     int name_len;
     int v1, v2, w;
-    unsigned int i, j;
+    int i, j;
     int capital_cnt = 0;
     int* capital_buf;
 
@@ -374,7 +374,7 @@ int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* ad
     {
         fprintf(stderr, "Wrong parameter : %s:%d\n", __func__, __LINE__);
         return 0;
-    }
+    } 
 
     while (*is_running_ptr && (++cnt <= 3 && is_okay == 0))
     {

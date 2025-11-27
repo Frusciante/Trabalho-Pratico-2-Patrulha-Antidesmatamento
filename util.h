@@ -18,7 +18,7 @@
 #include <pthread.h>
 #include <errno.h>
 
-#define INF 0xFFFFFFFF
+#define INF 0x7FFFFFFF
 #define CITY_NAME_LEN 30
 #define UDP_TIMEOUT_CLIENT 5 
 #define UDP_TIMEOUT_SERVER 1 
@@ -106,7 +106,7 @@ typedef struct event_queue
 
 void remove_whitespace(char* str);
 int is_valid_int(const char* const str);
-int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, unsigned int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt);
+int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt);
 int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr);
 
 #endif

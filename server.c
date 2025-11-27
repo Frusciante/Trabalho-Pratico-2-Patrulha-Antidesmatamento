@@ -25,7 +25,7 @@ static void update_info_cidade(const telemetria_t* const info_telemetria, info_c
 /*
     A function fills 'output_arr' with shortest distances from 'vertex' to all other vertices.
 */
-static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned int* output_arr, int* visited_arr, int num_vertices)
+static int dijkstra(int vertex, const int** const adj_matrix, int* output_arr, int* visited_arr, int num_vertices)
 {
     int i, j;
     unsigned int closest = INF;
@@ -34,14 +34,18 @@ static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned 
 
     if (!(adj_matrix && output_arr && visited_arr) || vertex >= num_vertices)
     {
+        fprintf("Wrong parameter, %s:%d\n", __func__, __LINE__);
         return 1;
     }
     
-    memset(visited_arr, 0, num_vertices * sizeof(int));
-    memset(output_arr, INF, num_vertices * sizeof(int));
+    for (i = 0; i < num_vertices; ++i)
+    {
+        output_arr[i] = INF;
+        visited_arr[i] = 0;
+    }
     visited_arr[vertex] = 1;
     
-    for (i = 0; i < num_vertices; i++)
+    for (i = 0; i < num_vertices; ++i)
     {
         output_arr[i] = adj_matrix[vertex][i];
     }
@@ -90,9 +94,9 @@ static int dijkstra(int vertex, const unsigned int** const adj_matrix, unsigned 
 
 int main(void)
 {
-    unsigned int** adj_matrix;
+    int** adj_matrix;
     info_cidade_t* city_info;
-    unsigned int* dist_list;
+    int* dist_list;
     int* visited;
     int* capitals;
     int city_cnt;
@@ -120,22 +124,30 @@ int main(void)
     signal(SIGINT, sig_handler);
     srand(time(NULL));
 
-    get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt);
+    if (0 != get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt))
+    {
+        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+
     dist_list = (unsigned int*)malloc(city_cnt * sizeof(unsigned int));
     if (!dist_list)
     {
+        fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
         return 1;
     }
     
     visited = (int*)malloc(city_cnt * sizeof(int));
     if (!visited)
     {
+        fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
         return 1;
     }
 
     sock = socket(AF_INET, SOCK_DGRAM, 0);
     if (sock < 3)
     {
+        fprintf(stderr, "socket() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
         return 1;
     }
 
@@ -145,6 +157,7 @@ int main(void)
     
     if (-1 == bind(sock, &serv_addr, sizeof(serv_addr)))
     {
+        fprintf(stderr, "bind() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
         close(sock);
         return 1;
     }
@@ -176,7 +189,7 @@ int main(void)
 
             if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
-                // error handling
+                fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
             }
 
             for (i = 0; i < city_cnt; i++)
@@ -197,6 +210,7 @@ int main(void)
                     if (min == 0x7FFFFFFF || min_idx == -1)
                     {
                         // exception handling
+                        fprintf("Failed to find the available drone team, %s:%d\n", __func__, __LINE__);
                         continue;
                     }
                     total_size = sizeof(header_t) + sizeof(payload_equipe_drone_t);
@@ -206,7 +220,7 @@ int main(void)
                     equipe_drone_ptr->id_equipe = min_idx;
                     if (-1 == sendto(sock, send_buf, total_size, 0, &clnt_addr, clnt_addr_len))
                     {
-                        // error handling
+                        fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
                     }
 
                     size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
@@ -231,7 +245,7 @@ int main(void)
             ack_ptr_send->status = ACK_CONCLUSAO;
             if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
-                // error handling
+                fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
             }
             break;
         }

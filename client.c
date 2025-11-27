@@ -46,6 +46,7 @@ int main(void)
     
     if (get_info_from_file(FILENAME, &city_info, &city_cnt, NULL, NULL, NULL))
     {
+        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
         return 1;
     }
 
@@ -54,6 +55,7 @@ int main(void)
     
     if (sock < 3)
     {
+        fprintf(stderr, "socket() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
         return 1;
     }
 
