@@ -96,12 +96,18 @@ void* thread_telemetry_sender(void* arg)
         header->tamanho = sizeof(payload_telemetria_t);
         header->tipo = MSG_TELEMETRIA;
         sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), "-> Telemetria enviada", &ack_telemetria_mutex, &ack_cond, &ack_telemetria_received, UDP_TIMEOUT_CLIENT, &is_running);
+
+        // initialization to prevent side effect
         memset(send_buf, 0, sizeof(send_buf));
     }
 
     return NULL;
 }
 
+/*
+    To prevent the race condition of message among threads, 'recvfrom()' is only called in this function.
+    When the message arrives, this function parse the data and calls 'pthread_cond_signal()' to wake up designated thread.
+*/
 void* thread_msg_receiver(void* arg)
 {
     char send_buf[sizeof(header_t) + sizeof(payload_ack_t)] = {};
@@ -177,6 +183,7 @@ void* thread_msg_receiver(void* arg)
             break;
         }
 
+        // initialization to prevent side effect
         memset(send_buf, 0, sizeof(send_buf));
         memset(recv_buf, 0, sizeof(recv_buf));
     }
@@ -223,10 +230,12 @@ void* thread_drone_team_action_simulator(void* arg)
         header_send->tamanho = sizeof(payload_conclusao_t);
         header_send->tipo = MSG_CONCLUSAO;
         sleep_time = (rand() % (SLEEP_TIME - 1)) + 1;
-        printf("Equipe %s atuando em %s\nTempo estimado: %d segundos\n", city_info[payload_send->id_equipe].nome_cidade, city_info[payload_send->id_cidade].nome_cidade, sleep_time);
+        printf("Equipe %s atuando em %s\nTempo estimado: %d segundos\n...\n", city_info[payload_send->id_equipe].nome_cidade, city_info[payload_send->id_cidade].nome_cidade, sleep_time);
         sleep_to_be_awaken(sleep_time, &is_running, &sleep_mutex, &sleep_cond);
         puts("Missão concluída!");
         sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), "-> Conclusão enviada ao servidor", &ack_conclusao_mutex, &conclusao_cond, &ack_conclusao_received, UDP_TIMEOUT_CLIENT, &is_running);
+        
+        // initialization to prevent side effect
         memset(send_buf, 0, sizeof(send_buf));
     }
     

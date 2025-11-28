@@ -73,6 +73,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     char* num_city_ptr = NULL;
     char* num_edge_ptr = NULL;
     char* type_start = NULL;
+    char* name_start = NULL;
     char* v1_ptr = NULL;
     char* v2_ptr = NULL;
     char* w_ptr = NULL;
@@ -150,6 +151,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
             continue;
         }
 
+        // First, split city type from the back.
         while (len-- > 0)
         {
             if (buffer[len] == ' ' || buffer[len] == '\t')
@@ -177,7 +179,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         *type_start = '\0';
 
-        char* name_start = strpbrk(buffer, " \t");
+        // to split the ID and the city name
+        name_start = strpbrk(buffer, " \t");
         if (!name_start)
         {
             continue;
