@@ -18,8 +18,7 @@ extern int is_running;
 static int ack_telemetria_received;
 static int ack_conclusao_received;
 static int is_telemetry_ready;
-static event_queue* events_head = NULL;
-static event_queue* events_tail = NULL;
+static event_queue events = {NULL, NULL}; 
 
 void* thread_monitoring_simulator(void* arg)
 {
@@ -115,7 +114,7 @@ void* thread_msg_receiver(void* arg)
     const header_t* const header_recv = (header_t*)recv_buf;
     payload_ack_t* const payload_send = (payload_ack_t*)(send_buf + sizeof(header_t));
     const payload_equipe_drone_t* const payload_recv = (payload_equipe_drone_t*)(recv_buf + sizeof(header_t));
-    event_queue* temp_event = NULL;
+    event_node* temp_event = NULL;
     const struct timeval tv = {1, 0};
     
     puts("[Thread Recepção Drones] Iniciada");
@@ -167,7 +166,7 @@ void* thread_msg_receiver(void* arg)
                 printf("[ORDEM DE DRONE RECEBIDA]\nCidade: %s (ID=%d)\nEquipe: %s (ID=%d)\n", city_info[payload_recv->id_cidade].nome_cidade, payload_recv->id_cidade, city_info[payload_recv->id_equipe].nome_cidade, payload_recv->id_equipe);
 
                 // insert to queue
-                temp_event = (event_queue*)malloc(sizeof(event_queue));
+                temp_event = (event_node*)malloc(sizeof(event_node));
                 if (!temp_event)
                 {
                     fprintf(stderr, "malloc() failed (%s), %s:%d", strerror_r(errno, errbuf, sizeof(errbuf)), __func__, __LINE__);
@@ -178,14 +177,14 @@ void* thread_msg_receiver(void* arg)
                 temp_event->next = NULL;
                 
                 pthread_mutex_lock(&drone_mutex);
-                if (events_head == NULL)
+                if (events.head == NULL)
                 {
-                    events_head = events_tail = temp_event;
+                    events.head = events.tail = temp_event;
                 }
                 else
                 {
-                    events_tail->next = temp_event;
-                    events_tail = temp_event;
+                    events.tail->next = temp_event;
+                    events.tail = temp_event;
                 }
                 pthread_cond_signal(&drone_cond);
                 pthread_mutex_unlock(&drone_mutex);
@@ -212,7 +211,7 @@ void* thread_drone_team_action_simulator(void* arg)
     const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
     header_t* const header_send = (header_t*)send_buf;
     payload_conclusao_t* const payload_send = (payload_conclusao_t*)(send_buf + sizeof(header_t)); 
-    struct event_queue* temp = NULL;
+    struct event_node* temp = NULL;
     int sleep_time;
 
     puts("[Thread Simulação Drones] Iniciada");
@@ -226,7 +225,7 @@ void* thread_drone_team_action_simulator(void* arg)
     while (is_running)
     {
         pthread_mutex_lock(&drone_mutex);
-        while (is_running && events_head == NULL)
+        while (is_running && events.head == NULL)
         {
             pthread_cond_wait(&drone_cond, &drone_mutex);
         }
@@ -237,14 +236,14 @@ void* thread_drone_team_action_simulator(void* arg)
             break;
         }
         
-        payload_send->id_cidade = events_head->id_cidade;
-        payload_send->id_equipe = events_head->id_equipe;
-        temp = events_head;
-        events_head = events_head->next;
+        payload_send->id_cidade = events.head->id_cidade;
+        payload_send->id_equipe = events.head->id_equipe;
+        temp = events.head;
+        events.head = events.head->next;
         free((void*)temp);
-        if (events_head == NULL)
+        if (events.head == NULL)
         {
-            events_tail = NULL;
+            events.tail = NULL;
         }
         pthread_mutex_unlock(&drone_mutex);
         
@@ -258,10 +257,10 @@ void* thread_drone_team_action_simulator(void* arg)
         memset(send_buf, 0, sizeof(send_buf));
     }
     
-    while (events_head != NULL)
+    while (events.head != NULL)
     {
-        temp = events_head;
-        events_head = events_head->next;
+        temp = events.head;
+        events.head = events.head->next;
         free((void*)temp);
     }
 

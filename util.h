@@ -97,11 +97,17 @@ typedef struct
     int equipe_atuando;
 } info_cidade_t;
 
-typedef struct event_queue
+typedef struct event_node
 {
     int id_cidade;
     int id_equipe;
-    struct event_queue* next;
+    struct event_node* next;
+} event_node;
+
+typedef struct event_queue
+{
+    event_node* head;
+    event_node* tail;
 } event_queue;
 
 void remove_whitespace(char* str);
