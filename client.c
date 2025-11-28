@@ -4,11 +4,11 @@ int is_running;
 int city_cnt;
 int sock;
 pthread_mutex_t city_info_mutex;
-pthread_mutex_t drone_mutex;
+pthread_mutex_t event_mutex;
 pthread_mutex_t ack_telemetria_mutex;
 pthread_mutex_t ack_conclusao_mutex;
 pthread_mutex_t sleep_mutex;
-pthread_cond_t drone_cond;
+pthread_cond_t event_cond;
 pthread_cond_t ack_cond;
 pthread_cond_t conclusao_cond;
 pthread_cond_t sleep_cond;
@@ -20,7 +20,7 @@ static void sig_handler(int sig)
     is_running = 0;
     pthread_cond_broadcast(&ack_cond);
     pthread_cond_broadcast(&conclusao_cond);
-    pthread_cond_broadcast(&drone_cond);
+    pthread_cond_broadcast(&event_cond);
     pthread_cond_broadcast(&sleep_cond);
     pthread_cond_broadcast(&telemetry_cond);
 }
@@ -37,7 +37,7 @@ int main(void)
 
     if (
         pthread_mutex_init(&city_info_mutex, NULL) ||
-        pthread_mutex_init(&drone_mutex, NULL) ||
+        pthread_mutex_init(&event_mutex, NULL) ||
         pthread_mutex_init(&ack_telemetria_mutex, NULL) ||
         pthread_mutex_init(&ack_conclusao_mutex, NULL) ||
         pthread_mutex_init(&sleep_mutex, NULL))
@@ -47,7 +47,7 @@ int main(void)
     }
 
     if (
-        pthread_cond_init(&drone_cond, NULL) ||
+        pthread_cond_init(&event_cond, NULL) ||
         pthread_cond_init(&ack_cond, NULL) ||
         pthread_cond_init(&sleep_cond, NULL) ||
         pthread_cond_init(&conclusao_cond, NULL) ||
@@ -99,11 +99,11 @@ int main(void)
     }
 
     pthread_mutex_destroy(&city_info_mutex);
-    pthread_mutex_destroy(&drone_mutex);
+    pthread_mutex_destroy(&event_mutex);
     pthread_mutex_destroy(&ack_telemetria_mutex);
     pthread_mutex_destroy(&ack_conclusao_mutex);
     pthread_mutex_destroy(&sleep_mutex);
-    pthread_cond_destroy(&drone_cond);
+    pthread_cond_destroy(&event_cond);
     pthread_cond_destroy(&ack_cond);
     pthread_cond_destroy(&conclusao_cond);
     pthread_cond_destroy(&sleep_cond);

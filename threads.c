@@ -4,10 +4,10 @@ extern info_cidade_t* city_info;
 extern pthread_mutex_t city_info_mutex;
 extern pthread_mutex_t ack_telemetria_mutex;
 extern pthread_mutex_t ack_conclusao_mutex;
-extern pthread_mutex_t drone_mutex;
+extern pthread_mutex_t event_mutex;
 extern pthread_mutex_t sleep_mutex;
 extern pthread_cond_t ack_cond;
-extern pthread_cond_t drone_cond;
+extern pthread_cond_t event_cond;
 extern pthread_cond_t conclusao_cond;
 extern pthread_cond_t sleep_cond;
 extern pthread_cond_t telemetry_cond;
@@ -106,7 +106,6 @@ void* thread_msg_receiver(void* arg)
 {
     char send_buf[sizeof(header_t) + sizeof(payload_ack_t)] = {};
     char recv_buf[sizeof(header_t) + sizeof(payload_equipe_drone_t)] = {};
-    char errbuf[1024];
     struct sockaddr_in recv_addr = {};
     const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
     socklen_t recv_addr_len;
@@ -114,7 +113,6 @@ void* thread_msg_receiver(void* arg)
     const header_t* const header_recv = (header_t*)recv_buf;
     payload_ack_t* const payload_send = (payload_ack_t*)(send_buf + sizeof(header_t));
     const payload_equipe_drone_t* const payload_recv = (payload_equipe_drone_t*)(recv_buf + sizeof(header_t));
-    event_node* temp_event = NULL;
     const struct timeval tv = {1, 0};
     
     puts("[Thread Recepção Drones] Iniciada");
@@ -127,7 +125,7 @@ void* thread_msg_receiver(void* arg)
     
     if (0 > setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv)))
     {
-        fprintf(stderr, "setsockopt() error (%s), %s:%d", strerror(errno), __func__, __LINE__);
+        fprintf(stderr, "setsockopt() error, %s:%d", __func__, __LINE__);
     }
 
     while (is_running)
@@ -165,29 +163,10 @@ void* thread_msg_receiver(void* arg)
             {
                 printf("[ORDEM DE DRONE RECEBIDA]\nCidade: %s (ID=%d)\nEquipe: %s (ID=%d)\n", city_info[payload_recv->id_cidade].nome_cidade, payload_recv->id_cidade, city_info[payload_recv->id_equipe].nome_cidade, payload_recv->id_equipe);
 
-                // insert to queue
-                temp_event = (event_node*)malloc(sizeof(event_node));
-                if (!temp_event)
-                {
-                    fprintf(stderr, "malloc() failed (%s), %s:%d", strerror_r(errno, errbuf, sizeof(errbuf)), __func__, __LINE__);
-                    continue;
-                }
-                temp_event->id_cidade = payload_recv->id_cidade;
-                temp_event->id_equipe = payload_recv->id_equipe;
-                temp_event->next = NULL;
-                
-                pthread_mutex_lock(&drone_mutex);
-                if (events.head == NULL)
-                {
-                    events.head = events.tail = temp_event;
-                }
-                else
-                {
-                    events.tail->next = temp_event;
-                    events.tail = temp_event;
-                }
-                pthread_cond_signal(&drone_cond);
-                pthread_mutex_unlock(&drone_mutex);
+                pthread_mutex_lock(&event_mutex);
+                enqueue(&events, payload_recv->id_cidade, payload_recv->id_equipe);
+                pthread_cond_signal(&event_cond);
+                pthread_mutex_unlock(&event_mutex);
 
                 header_send->tamanho = sizeof(payload_ack_t);
                 header_send->tipo = MSG_ACK;
@@ -211,7 +190,7 @@ void* thread_drone_team_action_simulator(void* arg)
     const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
     header_t* const header_send = (header_t*)send_buf;
     payload_conclusao_t* const payload_send = (payload_conclusao_t*)(send_buf + sizeof(header_t)); 
-    struct event_node* temp = NULL;
+    struct event_node event_buf = {};
     int sleep_time;
 
     puts("[Thread Simulação Drones] Iniciada");
@@ -224,29 +203,23 @@ void* thread_drone_team_action_simulator(void* arg)
     
     while (is_running)
     {
-        pthread_mutex_lock(&drone_mutex);
+        pthread_mutex_lock(&event_mutex);
         while (is_running && events.head == NULL)
         {
-            pthread_cond_wait(&drone_cond, &drone_mutex);
+            pthread_cond_wait(&event_cond, &event_mutex);
         }
 
         if (!is_running)
         {
-            pthread_mutex_unlock(&drone_mutex);
+            pthread_mutex_unlock(&event_mutex);
             break;
         }
         
-        payload_send->id_cidade = events.head->id_cidade;
-        payload_send->id_equipe = events.head->id_equipe;
-        temp = events.head;
-        events.head = events.head->next;
-        free((void*)temp);
-        if (events.head == NULL)
-        {
-            events.tail = NULL;
-        }
-        pthread_mutex_unlock(&drone_mutex);
+        dequeue(&events, &event_buf);
+        pthread_mutex_unlock(&event_mutex);
         
+        payload_send->id_cidade = event_buf.id_cidade;
+        payload_send->id_equipe = event_buf.id_equipe;
         header_send->tamanho = sizeof(payload_conclusao_t);
         header_send->tipo = MSG_CONCLUSAO;
         sleep_time = (rand() % (SLEEP_TIME - 1)) + 1;
@@ -257,12 +230,7 @@ void* thread_drone_team_action_simulator(void* arg)
         memset(send_buf, 0, sizeof(send_buf));
     }
     
-    while (events.head != NULL)
-    {
-        temp = events.head;
-        events.head = events.head->next;
-        free((void*)temp);
-    }
+    free_queue(&events);
 
     return NULL;
 }

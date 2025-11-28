@@ -428,3 +428,91 @@ void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  
     }
     pthread_mutex_unlock(mutex);
 }
+
+int enqueue(event_queue* queue, int id_cidade, int id_equipe)
+{
+    event_node* temp; 
+    if (!queue)
+    {
+        fprintf(stderr, "Wrong parameter: %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+    
+    temp = (event_node*)malloc(sizeof(event_node));
+    if (!temp)
+    {
+        fprintf(stderr, "malloc() failed: %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+    
+    temp->id_cidade = id_cidade;
+    temp->id_equipe = id_equipe;
+    temp->next = NULL;
+    
+    if (queue->head == NULL)
+    {
+        queue->head = queue->tail = temp;
+    }
+    else
+    {
+        queue->tail->next = temp;
+        queue->tail = temp;
+    }
+    
+    return 0;
+}
+
+int dequeue(event_queue* queue, event_node* output)
+{
+    event_node* temp;
+    
+    if (!queue)
+    {
+        fprintf(stderr, "Wrong parameter: %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+    
+    if (!queue->head)
+    {
+        fprintf(stderr, "The queue is empty: %s:%d\n", __func__, __LINE__);
+        return -1;
+    }
+    
+    temp = queue->head;
+    queue->head = queue->head->next;
+    
+    if (queue->head == NULL)
+    {
+        queue->tail = NULL;
+    }
+
+    if (output)
+    {
+        output->id_cidade = temp->id_cidade;
+        output->id_equipe = temp->id_equipe;
+        output->next = NULL;
+    }
+
+    free(temp);
+    
+    return 0;
+}
+
+
+void free_queue(event_queue* queue)
+{
+    event_node* temp;
+
+    if (!queue)
+    {
+        return;
+    }
+
+    while (queue->head != NULL)
+    {
+        temp = queue->head;
+        queue->head = queue->head->next;
+        free(temp);
+    }
+    queue->tail = NULL;
+}

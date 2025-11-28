@@ -115,4 +115,8 @@ int is_valid_int(const char* const str);
 int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt);
 int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, const char* message, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr);
 void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  pthread_cond_t* cond);
+int enqueue(event_queue* queue, int id_cidade, int id_equipe);
+int dequeue(event_queue* queue, event_node* output);
+void free_queue(event_queue* queue);
+
 #endif
