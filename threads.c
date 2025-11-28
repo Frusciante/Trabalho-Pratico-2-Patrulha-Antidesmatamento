@@ -5,21 +5,27 @@ extern pthread_mutex_t city_info_mutex;
 extern pthread_mutex_t ack_telemetria_mutex;
 extern pthread_mutex_t ack_conclusao_mutex;
 extern pthread_mutex_t drone_mutex;
+extern pthread_mutex_t sleep_mutex;
 extern pthread_cond_t ack_cond;
 extern pthread_cond_t drone_cond;
 extern pthread_cond_t conclusao_cond;
+extern pthread_cond_t sleep_cond;
+extern pthread_cond_t telemetry_cond;
 extern int city_cnt;
 extern int sock;
 extern int is_running;
 
 static int ack_telemetria_received;
 static int ack_conclusao_received;
+static int is_telemetry_ready;
 static event_queue* events_head = NULL;
 static event_queue* events_tail = NULL;
 
 void* thread_monitoring_simulator(void* arg)
 {
     int i;
+
+    puts("[Thread Monitoramento] Iniciada");
 
     while (is_running)
     {
@@ -28,17 +34,18 @@ void* thread_monitoring_simulator(void* arg)
         {
             city_info[i].status = (rand() % 100 < 3) ? ALERTA : OK;
         }
+        is_telemetry_ready = 1;
+        pthread_cond_signal(&telemetry_cond);
         pthread_mutex_unlock(&city_info_mutex);
         
         if (is_running)
         {
-            sleep(SLEEP_TIME);
+            sleep_to_be_awaken(SLEEP_TIME, &is_running, &sleep_mutex, &sleep_cond);
         }
     }
 
     return NULL;
 }
-
 void* thread_telemetry_sender(void* arg)
 {
     int i;
@@ -46,6 +53,8 @@ void* thread_telemetry_sender(void* arg)
     header_t* const header = (header_t*)send_buf;
     payload_telemetria_t* const payload = (payload_telemetria_t*)(send_buf + sizeof(header_t));
     const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
+
+    puts("[Thread Telemetria] Iniciada");
     
     if (!arg)
     {
@@ -56,20 +65,39 @@ void* thread_telemetry_sender(void* arg)
     while (is_running)
     {
         pthread_mutex_lock(&city_info_mutex);
+
+        while (!is_telemetry_ready && is_running)
+        {
+            pthread_cond_wait(&telemetry_cond, &city_info_mutex);
+        }
+
+        if (!is_running)
+        {
+            pthread_mutex_unlock(&city_info_mutex);
+            break;
+        }
+
         payload->total = city_cnt;
         for (i = 0; i < city_cnt; ++i)
         {
             payload->dados[i].id_cidade = city_info[i].id_cidade;
             payload->dados[i].status = city_info[i].status;
         }
+        is_telemetry_ready = 0;
         pthread_mutex_unlock(&city_info_mutex);
-        
-        sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), &ack_telemetria_mutex, &ack_cond, &ack_telemetria_received, UDP_TIMEOUT_CLIENT, &is_running);
-        
-        if (is_running)
+
+        printf("[ENVIANDO TELEMETRIA]\nTotal de cidades: %d\n", city_cnt); 
+        for (i = 0; i < city_cnt; ++i)
         {
-            sleep(SLEEP_TIME);
+            if (payload->dados[i].status == ALERTA)
+            {
+                printf("ALERTA: %s (ID=%d)\n", city_info[i].nome_cidade, i);        
+            }
         }
+        header->tamanho = sizeof(payload_telemetria_t);
+        header->tipo = MSG_TELEMETRIA;
+        sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), "-> Telemetria enviada", &ack_telemetria_mutex, &ack_cond, &ack_telemetria_received, UDP_TIMEOUT_CLIENT, &is_running);
+        memset(send_buf, 0, sizeof(send_buf));
     }
 
     return NULL;
@@ -77,8 +105,9 @@ void* thread_telemetry_sender(void* arg)
 
 void* thread_msg_receiver(void* arg)
 {
-    char send_buf[sizeof(header_t) + sizeof(payload_equipe_drone_t)] = {};
-    char recv_buf[sizeof(header_t) + sizeof(payload_ack_t)] = {};
+    char send_buf[sizeof(header_t) + sizeof(payload_ack_t)] = {};
+    char recv_buf[sizeof(header_t) + sizeof(payload_equipe_drone_t)] = {};
+    char errbuf[1024];
     struct sockaddr_in recv_addr = {};
     const struct sockaddr_in* const serv_addr = (struct sockaddr_in*)arg;
     socklen_t recv_addr_len;
@@ -89,6 +118,8 @@ void* thread_msg_receiver(void* arg)
     event_queue* temp_event = NULL;
     const struct timeval tv = {1, 0};
     
+    puts("[Thread Recepção Drones] Iniciada");
+
     if (!arg)
     {
         fprintf(stderr, "Wrong thread argument, %s:%d\n", __func__, __LINE__);
@@ -102,7 +133,7 @@ void* thread_msg_receiver(void* arg)
 
     while (is_running)
     {
-        if (sizeof(header_t) < recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&recv_addr, &recv_addr_len))
+        if (sizeof(header_t) > recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&recv_addr, &recv_addr_len))
         {
             continue;
         }
@@ -110,6 +141,7 @@ void* thread_msg_receiver(void* arg)
         switch (header_recv->tipo)
         {
         case MSG_ACK:
+            puts("ACK recebido do servidor");
             if (header_recv->tamanho == sizeof(payload_ack_t))
             {
                 switch (((payload_ack_t *)(recv_buf + sizeof(header_t)))->status)
@@ -132,10 +164,13 @@ void* thread_msg_receiver(void* arg)
         case MSG_EQUIPE_DRONE:
             if (header_recv->tamanho == sizeof(payload_equipe_drone_t))
             {
-                // queue에 쌓기
+                printf("[ORDEM DE DRONE RECEBIDA]\nCidade: %s (ID=%d)\nEquipe: %s (ID=%d)\n", city_info[payload_recv->id_cidade].nome_cidade, payload_recv->id_cidade, city_info[payload_recv->id_equipe].nome_cidade, payload_recv->id_equipe);
+
+                // insert to queue
                 temp_event = (event_queue*)malloc(sizeof(event_queue));
                 if (!temp_event)
                 {
+                    fprintf(stderr, "malloc() failed (%s), %s:%d", strerror_r(errno, errbuf, sizeof(errbuf)), __func__, __LINE__);
                     continue;
                 }
                 temp_event->id_cidade = payload_recv->id_cidade;
@@ -163,6 +198,9 @@ void* thread_msg_receiver(void* arg)
             }
             break;
         }
+
+        memset(send_buf, 0, sizeof(send_buf));
+        memset(recv_buf, 0, sizeof(recv_buf));
     }
     
     return NULL;
@@ -175,6 +213,9 @@ void* thread_drone_team_action_simulator(void* arg)
     header_t* const header_send = (header_t*)send_buf;
     payload_conclusao_t* const payload_send = (payload_conclusao_t*)(send_buf + sizeof(header_t)); 
     struct event_queue* temp = NULL;
+    int sleep_time;
+
+    puts("[Thread Simulação Drones] Iniciada");
     
     if (!arg)
     {
@@ -209,10 +250,12 @@ void* thread_drone_team_action_simulator(void* arg)
         
         header_send->tamanho = sizeof(payload_conclusao_t);
         header_send->tipo = MSG_CONCLUSAO;
-        sleep((rand() % (SLEEP_TIME - 1)) + 1);
-
-        sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), &ack_conclusao_mutex, &conclusao_cond, &ack_conclusao_received, UDP_TIMEOUT_CLIENT, &is_running);
-
+        sleep_time = (rand() % (SLEEP_TIME - 1)) + 1;
+        printf("Equipe %s atuando em %s\nTempo estimado: %d segundos\n", city_info[payload_send->id_equipe].nome_cidade, city_info[payload_send->id_cidade].nome_cidade, sleep_time);
+        sleep_to_be_awaken(sleep_time, &is_running, &sleep_mutex, &sleep_cond);
+        puts("Missão concluída!");
+        sendto_with_retry(sock, send_buf, sizeof(send_buf), (struct sockaddr*)serv_addr, sizeof(struct sockaddr_in), "-> Conclusão enviada ao servidor", &ack_conclusao_mutex, &conclusao_cond, &ack_conclusao_received, UDP_TIMEOUT_CLIENT, &is_running);
+        memset(send_buf, 0, sizeof(send_buf));
     }
     
     while (events_head != NULL)

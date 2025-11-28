@@ -34,10 +34,11 @@ static int dijkstra(int vertex, const int** const adj_matrix, int* output_arr, i
 
     if (!(adj_matrix && output_arr && visited_arr) || vertex >= num_vertices)
     {
-        fprintf("Wrong parameter, %s:%d\n", __func__, __LINE__);
+        fprintf(stderr, "Wrong parameter, %s:%d\n", __func__, __LINE__);
         return 1;
     }
     
+    // initializing
     for (i = 0; i < num_vertices; ++i)
     {
         output_arr[i] = INF;
@@ -130,7 +131,7 @@ int main(void)
         return 1;
     }
 
-    dist_list = (unsigned int*)malloc(city_cnt * sizeof(unsigned int));
+    dist_list = (int*)malloc(city_cnt * sizeof(int));
     if (!dist_list)
     {
         fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
@@ -152,7 +153,7 @@ int main(void)
     }
 
     serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons((uint16_t)SERV_PORT);
+    serv_addr.sin_port = htons((short)SERV_PORT);
     serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
     
     if (-1 == bind(sock, &serv_addr, sizeof(serv_addr)))
@@ -163,10 +164,11 @@ int main(void)
     }
 
     setsockopt(sock, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
-
+    is_running = 1;
     printf("Servidor escutando na porta %d...\n", SERV_PORT);
     while (is_running)
     {
+        clnt_addr_len = sizeof(clnt_addr);
         size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&clnt_addr, &clnt_addr_len);
         if (size_received < sizeof(header_t))
         {
@@ -183,21 +185,32 @@ int main(void)
         case MSG_TELEMETRIA:
             printf("[TELEMETRIA RECEBIDA]\nTotal de cidades monitoradas: %d\n", telemetria_ptr->total);
             update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
-
+            
+            for (i = 0; i < city_cnt; ++i)
+            {
+                if (city_info[i].status == ALERTA)
+                {
+                    printf("ALERTA: %s (ID=%d)\n", city_info[i].nome_cidade, city_info[i].id_cidade);
+                }
+            }
+            
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
             header_ptr_send->tamanho = sizeof(payload_ack_t);
             header_ptr_send->tipo = MSG_ACK;
             ack_ptr_send->status = ACK_TELEMETRIA;
 
-            if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
+            if (-1 == sendto(sock, (void*)send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
                 fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+                continue;
             }
+            printf("-> ACK enviado (tipo=%d)\n", ack_ptr_send->status);
 
-            for (i = 0; i < city_cnt; i++)
+            for (i = 0; i < city_cnt; ++i)
             {
                 if (city_info[i].status == ALERTA && city_info[i].equipe_atuando == 0)
                 {
+                    printf("[DESPACHANDO DRONES]\nCidade em alerta: %s (ID=%d)\n", city_info[i].nome_cidade, i);
                     dijkstra(i, (const int** const)adj_matrix, dist_list, visited, city_cnt);
                     min = 0x7FFFFFFF;
                     min_idx = -1;
@@ -212,9 +225,12 @@ int main(void)
                     if (min == 0x7FFFFFFF || min_idx == -1)
                     {
                         // exception handling
-                        fprintf("Failed to find the available drone team, %s:%d\n", __func__, __LINE__);
+                        fprintf(stderr, "Failed to find the available drone team, %s:%d\n", __func__, __LINE__);
                         continue;
                     }
+
+                    printf("-> Dijkstra: capital %s (ID=%d) selecionada, distância = %d km\n", city_info[min_idx].nome_cidade, min_idx, min);
+
                     total_size = sizeof(header_t) + sizeof(payload_equipe_drone_t);
                     header_ptr_send->tamanho = sizeof(payload_equipe_drone_t);
                     header_ptr_send->tipo = MSG_EQUIPE_DRONE;
@@ -223,14 +239,17 @@ int main(void)
                     if (-1 == sendto(sock, send_buf, total_size, 0, &clnt_addr, clnt_addr_len))
                     {
                         fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+                        continue;
                     }
+                    
+                    printf("-> Ordem enviada: Equipe %s (ID=%d) -> Cidade %s (ID=%d)\n", city_info[min_idx].nome_cidade, min_idx, city_info[i].nome_cidade, i);
 
                     size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
                     if (size_received == sizeof(header_t) + sizeof(payload_ack_t) && header_ptr_recv->tipo == MSG_ACK)
                     {
                         if (ack_ptr_recv->status == ACK_EQUIPE_DRONE)
                         {
-                            city_info[i].evento_timestamp = time(NULL);
+                            printf("[ACK RECEBIDO]\nCliente confirmou recebimento de ordem de drone para %s\n", city_info[i].nome_cidade);
                             city_info[i].equipe_atuando = 1;
                             city_info[min_idx].drone_disponivel = 0;
                         }
@@ -239,15 +258,21 @@ int main(void)
             }
             break;
         case MSG_CONCLUSAO:
-            city_info[conclusao_ptr->id_cidade].evento_timestamp = 0;
+            city_info[conclusao_ptr->id_cidade].equipe_atuando = 0;
             city_info[conclusao_ptr->id_equipe].drone_disponivel = 1;
+            puts("MISSÃO CONCLUÍDA");
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
             header_ptr_send->tamanho = sizeof(payload_ack_t);
             header_ptr_send->tipo = MSG_ACK;
             ack_ptr_send->status = ACK_CONCLUSAO;
+            printf("Cidade atendida: %s (ID=%d)\nEquipe: %s (ID=%d)\n-> Equipe %s liberado para novas missões\n", city_info[conclusao_ptr->id_cidade].nome_cidade, conclusao_ptr->id_cidade, city_info[conclusao_ptr->id_equipe].nome_cidade, conclusao_ptr->id_equipe, city_info[conclusao_ptr->id_equipe].nome_cidade);
             if (-1 == sendto(sock, send_buf, total_size, 0, (struct sockaddr *)&clnt_addr, clnt_addr_len))
             {
                 fprintf(stderr, "sendto() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+            }
+            else
+            {
+                printf("-> ACK enviado (tipo=%d)\n", ack_ptr_send->status);
             }
             break;
         }

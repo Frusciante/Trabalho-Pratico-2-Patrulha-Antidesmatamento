@@ -3,13 +3,16 @@
 int is_running;
 int city_cnt;
 int sock;
-pthread_mutex_t city_info_mutex;
-pthread_mutex_t drone_mutex;
-pthread_mutex_t ack_telemetria_mutex;
-pthread_mutex_t ack_conclusao_mutex;
-pthread_cond_t drone_cond;
-pthread_cond_t ack_cond;
-pthread_cond_t conclusao_cond;
+pthread_mutex_t city_info_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t drone_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ack_telemetria_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t ack_conclusao_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_mutex_t sleep_mutex = PTHREAD_MUTEX_INITIALIZER;
+pthread_cond_t drone_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t ack_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t conclusao_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t sleep_cond = PTHREAD_COND_INITIALIZER;
+pthread_cond_t telemetry_cond = PTHREAD_COND_INITIALIZER;
 info_cidade_t* city_info;
 
 static void sig_handler(int sig)
@@ -18,6 +21,8 @@ static void sig_handler(int sig)
     pthread_cond_broadcast(&ack_cond);
     pthread_cond_broadcast(&conclusao_cond);
     pthread_cond_broadcast(&drone_cond);
+    pthread_cond_broadcast(&sleep_cond);
+    pthread_cond_broadcast(&telemetry_cond);
 }
 
 int main(void)
@@ -25,33 +30,9 @@ int main(void)
     pthread_t threads[THREAD_CNT] = {};
     struct sockaddr_in serv_addr = {};
     int i;
-    
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(SERV_PORT);
-    if (1 != inet_pton(AF_INET, SERV_IP, &(serv_addr.sin_addr)))
-    { 
-        return 1;
-    }
-    
-    if (
-    pthread_mutex_init(&city_info_mutex, NULL) ||
-    pthread_mutex_init(&drone_mutex, NULL) ||
-    pthread_mutex_init(&ack_telemetria_mutex, NULL) ||
-    pthread_mutex_init(&ack_conclusao_mutex, NULL)
-    )
-    {
-        fprintf("pthread_mutex_init() error (%d), %s:%d", strerror(errno), __func__, __LINE__);
-    }
 
-    if (
-    pthread_cond_init(&ack_cond, NULL) ||
-    pthread_cond_init(&drone_cond, NULL) ||
-    pthread_cond_init(&conclusao_cond, NULL)
-    )
-    {
-        fprintf("pthread_cond_init() error (%d), %s:%d", strerror(errno), __func__, __LINE__);
-    }
-
+    srand(time(NULL));
+    
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
     
@@ -61,8 +42,15 @@ int main(void)
         return 1;
     }
 
-    is_running = 1;
+    serv_addr.sin_family = AF_INET;
+    serv_addr.sin_port = htons(SERV_PORT);
+    if (1 != inet_pton(AF_INET, SERV_IP, &(serv_addr.sin_addr)))
+    { 
+        return 1;
+    }
     sock = socket(AF_INET, SOCK_DGRAM, 0);
+
+    printf("Conectado ao servidor %s:%d\n", SERV_IP, SERV_PORT);
     
     if (sock < 3)
     {
@@ -70,6 +58,9 @@ int main(void)
         return 1;
     }
 
+    is_running = 1;
+
+    puts("Iniciando threads...");
     if (
         pthread_create(&threads[0], NULL, thread_monitoring_simulator, NULL) ||
         pthread_create(&threads[1], NULL, thread_telemetry_sender, (void*)&serv_addr) ||
@@ -79,6 +70,8 @@ int main(void)
     {
         return 1;
     }
+
+    puts("Todas as threads iniciadas com sucesso\nPressione Ctrl+C para encerrar...\n");
     
     for (i = 0; i < THREAD_CNT; ++i)
     {
@@ -89,9 +82,12 @@ int main(void)
     pthread_mutex_destroy(&drone_mutex);
     pthread_mutex_destroy(&ack_telemetria_mutex);
     pthread_mutex_destroy(&ack_conclusao_mutex);
+    pthread_mutex_destroy(&sleep_mutex);
     pthread_cond_destroy(&drone_cond);
     pthread_cond_destroy(&ack_cond);
     pthread_cond_destroy(&conclusao_cond);
+    pthread_cond_destroy(&sleep_cond);
+    pthread_cond_destroy(&telemetry_cond);
 
     close(sock);
     free(city_info);

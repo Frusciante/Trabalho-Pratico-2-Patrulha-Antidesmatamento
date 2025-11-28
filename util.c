@@ -280,7 +280,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         return 0;
     }
    
-    *adj_matrix_ptr = (unsigned int**)calloc(city_cnt_temp, sizeof(unsigned int*));
+    *adj_matrix_ptr = (int**)calloc(city_cnt_temp, sizeof(unsigned int*));
     if (!(*adj_matrix_ptr))
     {
         fprintf(stderr, "calloc() failed (%s): %s:%d\n", strerror(errno), __func__, __LINE__);
@@ -292,7 +292,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
     for (i = 0; i < city_cnt_temp; i++)
     {
-        (*adj_matrix_ptr)[i] = (unsigned int*)calloc(city_cnt_temp, sizeof(unsigned int));
+        (*adj_matrix_ptr)[i] = (int*)calloc(city_cnt_temp, sizeof(unsigned int));
         if (!(*adj_matrix_ptr)[i])
         {
             fprintf(stderr, "calloc() failed (%s): %s:%d\n", strerror(errno), __func__, __LINE__);
@@ -353,7 +353,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     if (cnt != edge_cnt)
     {
         // warning
-        fprintf("Warning: Wrong edge count: %d(%d expected), %s:%d\n", cnt, edge_cnt, __func__, __LINE__);
+        fprintf(stderr, "Warning: Wrong edge count: %d(%d expected), %s:%d\n", cnt, edge_cnt, __func__, __LINE__);
     }
 
     free(capital_buf);
@@ -363,7 +363,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 }
 
 
-int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr)
+int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, const char* message, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr)
 {
     int cnt = 0;
     int is_okay = 0;
@@ -376,9 +376,13 @@ int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* ad
         return 0;
     } 
 
-    while (*is_running_ptr && (++cnt <= 3 && is_okay == 0))
+    while (*is_running_ptr && (++cnt <= NUM_RETRY && is_okay == 0))
     {
         sendto(sock, buf, len, 0, (struct sockaddr *)addr, addr_len);
+        if (message)
+        {
+            printf("%s (tentativa %d/%d)\n", message, cnt, NUM_RETRY);
+        }
         clock_gettime(CLOCK_REALTIME, &ts);
         ts.tv_sec += timeout;
         check_timeout = 0;
@@ -396,4 +400,24 @@ int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* ad
     }
     
     return is_okay;
+}
+
+void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  pthread_cond_t* cond)
+{
+    struct timespec ts;
+    int result;
+
+    clock_gettime(CLOCK_REALTIME, &ts);
+    ts.tv_sec += secs;
+
+    pthread_mutex_lock(mutex);
+    while (*is_running_ptr)
+    {
+        result = pthread_cond_timedwait(cond, mutex, &ts);
+        if (result == ETIMEDOUT)
+        {
+            break;
+        }
+    }
+    pthread_mutex_unlock(mutex);
 }

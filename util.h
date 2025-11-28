@@ -23,6 +23,7 @@
 #define UDP_TIMEOUT_CLIENT 5 
 #define UDP_TIMEOUT_SERVER 1 
 #define SLEEP_TIME 30
+#define NUM_RETRY 3
 #define SERV_PORT 8080
 #define SERV_IP "127.0.0.1" 
 #define FILENAME "grafo_amazonia_legal.txt" 
@@ -94,7 +95,6 @@ typedef struct
     char nome_cidade[CITY_NAME_LEN]; 
     int status;
     int equipe_atuando;
-    time_t evento_timestamp;
 } info_cidade_t;
 
 typedef struct event_queue
@@ -107,6 +107,6 @@ typedef struct event_queue
 void remove_whitespace(char* str);
 int is_valid_int(const char* const str);
 int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr, int* city_cnt, int*** adj_matrix_ptr, int** capitals_ptr, int* capital_cnt);
-int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr);
-
+int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, const char* message, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr);
+void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  pthread_cond_t* cond);
 #endif
