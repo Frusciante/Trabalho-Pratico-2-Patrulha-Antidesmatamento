@@ -362,7 +362,10 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     return 0;
 }
 
-
+/*
+ * The function tries to send the given buffer for multiple times if failed.
+ * Checks ack_flag's value. If the flag is 1 and timeout not occur, it won't try to send more.
+ */
 int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* addr, socklen_t addr_len, const char* message, pthread_mutex_t* mutex, pthread_cond_t* cond, int* ack_flag, int timeout, int* is_running_ptr)
 {
     int cnt = 0;
@@ -402,6 +405,10 @@ int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* ad
     return is_okay;
 }
 
+/*
+ *  'Sleep' function to prevent long waiting when the program ends.
+ *  Signal handler will call pthread_cond_broadcast() to unblock pthread_cond_timedwait(). 
+ */
 void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  pthread_cond_t* cond)
 {
     struct timespec ts;
