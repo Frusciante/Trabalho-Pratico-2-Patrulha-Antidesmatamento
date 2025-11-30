@@ -227,12 +227,15 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         }
 
         (*city_info_ptr)[id].id_cidade = id;
-        (*city_info_ptr)[id].eh_capital = type;
         if (type == 1)
         {
             (*city_info_ptr)[id].drone_disponivel = 1;
             capital_buf[capital_cnt] = id;
             capital_cnt++;
+        }
+        else
+        {
+            (*city_info_ptr)[id].drone_disponivel = -1;
         }
     }
     

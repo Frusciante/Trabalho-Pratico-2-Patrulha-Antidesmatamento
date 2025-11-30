@@ -90,7 +90,6 @@ typedef struct
 typedef struct
 {
     int id_cidade;
-    int eh_capital;
     int drone_disponivel; 
     char nome_cidade[CITY_NAME_LEN]; 
     int status;
