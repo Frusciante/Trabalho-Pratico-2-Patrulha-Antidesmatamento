@@ -28,8 +28,8 @@ static void update_info_cidade(const telemetria_t* const info_telemetria, info_c
 static int dijkstra(int vertex, const int** const adj_matrix, int* output_arr, int* visited_arr, int num_vertices)
 {
     int i, j;
-    unsigned int closest = INF;
-    unsigned int closest_idx;
+    int closest = INF;
+    int closest_idx;
     int w;
 
     if (!(adj_matrix && output_arr && visited_arr) || vertex >= num_vertices)
