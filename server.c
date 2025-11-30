@@ -203,12 +203,12 @@ int main(void)
     {
         clnt_addr_len = sizeof(clnt_addr);
         size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr*)&clnt_addr, &clnt_addr_len);
-        if (size_received < sizeof(header_t))
+        if (size_received < (ssize_t)(sizeof(header_t)))
         {
             continue;
         }
 
-        if (size_received != header_ptr_recv->tamanho + sizeof(header_t))
+        if (size_received != header_ptr_recv->tamanho + (ssize_t)(sizeof(header_t)))
         {
             continue;
         }
@@ -235,7 +235,7 @@ int main(void)
             }
             
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
-            header_ptr_send->tamanho = sizeof(payload_ack_t);
+            header_ptr_send->tamanho = (uint16_t)(sizeof(payload_ack_t));
             header_ptr_send->tipo = MSG_ACK;
             ack_ptr_send->status = ACK_TELEMETRIA;
 
@@ -272,7 +272,7 @@ int main(void)
                     printf("-> Dijkstra: capital %s (ID=%d) selecionada, distância = %d km\n", city_info[min_idx].nome_cidade, min_idx, min);
 
                     total_size = sizeof(header_t) + sizeof(payload_equipe_drone_t);
-                    header_ptr_send->tamanho = sizeof(payload_equipe_drone_t);
+                    header_ptr_send->tamanho = (uint16_t)(sizeof(payload_equipe_drone_t));
                     header_ptr_send->tipo = MSG_EQUIPE_DRONE;
                     equipe_drone_ptr->id_cidade = i;
                     equipe_drone_ptr->id_equipe = min_idx;
@@ -285,7 +285,7 @@ int main(void)
                     printf("-> Ordem enviada: Equipe %s (ID=%d) -> Cidade %s (ID=%d)\n", city_info[min_idx].nome_cidade, min_idx, city_info[i].nome_cidade, i);
 
                     size_received = recvfrom(sock, recv_buf, sizeof(recv_buf), 0, (struct sockaddr *)&clnt_addr, &clnt_addr_len);
-                    if (size_received == sizeof(header_t) + sizeof(payload_ack_t) && header_ptr_recv->tipo == MSG_ACK)
+                    if (size_received == (ssize_t)(sizeof(header_t)) + (ssize_t)(sizeof(payload_ack_t)) && header_ptr_recv->tipo == MSG_ACK)
                     {
                         if (ack_ptr_recv->status == ACK_EQUIPE_DRONE)
                         {
@@ -302,7 +302,7 @@ int main(void)
             city_info[conclusao_ptr->id_equipe].drone_disponivel = 1;
             puts("MISSÃO CONCLUÍDA");
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
-            header_ptr_send->tamanho = sizeof(payload_ack_t);
+            header_ptr_send->tamanho = (ssize_t)(sizeof(payload_ack_t));
             header_ptr_send->tipo = MSG_ACK;
             ack_ptr_send->status = ACK_CONCLUSAO;
             printf("Cidade atendida: %s (ID=%d)\nEquipe: %s (ID=%d)\n-> Equipe %s liberado para novas missões\n", city_info[conclusao_ptr->id_cidade].nome_cidade, conclusao_ptr->id_cidade, city_info[conclusao_ptr->id_equipe].nome_cidade, conclusao_ptr->id_equipe, city_info[conclusao_ptr->id_equipe].nome_cidade);
