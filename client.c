@@ -35,6 +35,12 @@ int main(void)
     signal(SIGPIPE, SIG_IGN);
     signal(SIGINT, sig_handler);
 
+    if (get_info_from_file(FILENAME, &city_info, &city_cnt, NULL, NULL, NULL))
+    {
+        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+
     if (
         pthread_mutex_init(&city_info_mutex, NULL) ||
         pthread_mutex_init(&event_mutex, NULL) ||
@@ -43,6 +49,7 @@ int main(void)
         pthread_mutex_init(&sleep_mutex, NULL))
     {
         fprintf(stderr, "pthread_mutex_init() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
         return 1;
     }
 
@@ -54,19 +61,17 @@ int main(void)
         pthread_cond_init(&telemetry_cond, NULL))
     {
         fprintf(stderr, "pthread_cond_init() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
         return 1;
     }
 
-    if (get_info_from_file(FILENAME, &city_info, &city_cnt, NULL, NULL, NULL))
-    {
-        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
-        return 1;
-    }
 
     serv_addr.sin_family = AF_INET;
     serv_addr.sin_port = htons(SERV_PORT);
     if (1 != inet_pton(AF_INET, SERV_IP, &(serv_addr.sin_addr)))
     { 
+        fprintf(stderr, "inet_pton() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
         return 1;
     }
     sock = socket(AF_INET, SOCK_DGRAM, 0);
@@ -76,6 +81,7 @@ int main(void)
     if (sock < 3)
     {
         fprintf(stderr, "socket() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
         return 1;
     }
 
@@ -88,6 +94,7 @@ int main(void)
         pthread_create(&threads[2], NULL, thread_msg_receiver, (void *)&serv_addr) ||
         pthread_create(&threads[3], NULL, thread_drone_team_action_simulator, (void *)&serv_addr))
     {
+        FREE_SAFER(city_info);
         return 1;
     }
 

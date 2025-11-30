@@ -125,10 +125,23 @@ int main(void)
     signal(SIGINT, sig_handler);
     srand(time(NULL));
 
+    if (0 != get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt))
+    {
+        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
+        return 1;
+    }
+
     dist_list = (int*)malloc(city_cnt * sizeof(int));
     if (!dist_list)
     {
         fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
+        for (i = 0; i < city_cnt; ++i)
+        {
+            FREE_SAFER(adj_matrix[i]);
+        }
+        FREE_SAFER(adj_matrix);
+        FREE_SAFER(capitals);
         return 1;
     }
     
@@ -136,6 +149,13 @@ int main(void)
     if (!visited)
     {
         fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
+        for (i = 0; i < city_cnt; ++i)
+        {
+            FREE_SAFER(adj_matrix[i]);
+        }
+        FREE_SAFER(adj_matrix);
+        FREE_SAFER(capitals);
         FREE_SAFER(dist_list);
         return 1;
     }
@@ -144,6 +164,13 @@ int main(void)
     if (sock < 3)
     {
         fprintf(stderr, "socket() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(city_info);
+        for (i = 0; i < city_cnt; ++i)
+        {
+            FREE_SAFER(adj_matrix[i]);
+        }
+        FREE_SAFER(adj_matrix);
+        FREE_SAFER(capitals);
         FREE_SAFER(dist_list);
         FREE_SAFER(visited);
         return 1;
@@ -156,15 +183,13 @@ int main(void)
     if (-1 == bind(sock, &serv_addr, sizeof(serv_addr)))
     {
         fprintf(stderr, "bind() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
-        FREE_SAFER(dist_list);
-        FREE_SAFER(visited);
-        close(sock);
-        return 1;
-    }
-    
-    if (0 != get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt))
-    {
-        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
+        FREE_SAFER(city_info);
+        for (i = 0; i < city_cnt; ++i)
+        {
+            FREE_SAFER(adj_matrix[i]);
+        }
+        FREE_SAFER(adj_matrix);
+        FREE_SAFER(capitals);
         FREE_SAFER(dist_list);
         FREE_SAFER(visited);
         close(sock);
@@ -298,7 +323,7 @@ int main(void)
     FREE_SAFER(dist_list);
     FREE_SAFER(city_info);
     FREE_SAFER(capitals);
-    for (i = 0; i < city_cnt; i++)
+    for (i = 0; i < city_cnt; ++i)
     {
         FREE_SAFER(adj_matrix[i]);
     }
