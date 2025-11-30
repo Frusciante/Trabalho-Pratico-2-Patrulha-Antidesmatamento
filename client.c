@@ -110,7 +110,7 @@ int main(void)
     pthread_cond_destroy(&telemetry_cond);
 
     close(sock);
-    free(city_info);
+    FREE_SAFER(city_info);
 
     return 0;
 }

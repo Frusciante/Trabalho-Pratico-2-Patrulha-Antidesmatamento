@@ -204,8 +204,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fprintf(stderr, "Invalid city ID: %d, line %d of the file, %s:%d\n", id, cnt - 1, __func__, __LINE__);
             fclose(fp);
-            free(*city_info_ptr);
-            free(capital_buf);
+            FREE_SAFER(*city_info_ptr);
+            FREE_SAFER(capital_buf);
             return 1;
         }
 
@@ -213,12 +213,17 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fprintf(stderr, "City ID duplicated: %d, line %d of the file, %s:%d\n", id, cnt - 1, __func__, __LINE__);
             fclose(fp);
-            free(*city_info_ptr);
-            free(capital_buf);
+            FREE_SAFER(*city_info_ptr);
+            FREE_SAFER(capital_buf);
             return 1;
         }
 
+        if (name_len > CITY_NAME_LEN)
+        {
+            name_len = CITY_NAME_LEN;
+        }
         strncpy((*city_info_ptr)[id].nome_cidade, name_start + 1, name_len); 
+        (*city_info_ptr)[id].nome_cidade[CITY_NAME_LEN - 1] = '\0';
         remove_whitespace((*city_info_ptr)[id].nome_cidade); 
          
         if ((*city_info_ptr)[id].nome_cidade[0] == '\0')
@@ -245,8 +250,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fprintf(stderr, "City ID omitted: %d, %s:%d", i, __func__, __LINE__);
             fclose(fp);
-            free(*city_info_ptr);
-            free(capital_buf);
+            FREE_SAFER(*city_info_ptr);
+            FREE_SAFER(capital_buf);
             return 1;
         }
     }
@@ -254,8 +259,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     if (cnt < city_cnt_temp || capital_cnt == 0)
     {
         fclose(fp);
-        free(*city_info_ptr);
-        free(capital_buf);
+        FREE_SAFER(*city_info_ptr);
+        FREE_SAFER(capital_buf);
         return 1;
     }
     
@@ -266,8 +271,8 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         {
             fprintf(stderr, "calloc() failed (%s): %s:%d\n", strerror(errno), __func__, __LINE__);
             fclose(fp);
-            free(*city_info_ptr);
-            free(capital_buf);
+            FREE_SAFER(*city_info_ptr);
+            FREE_SAFER(capital_buf);
             return 1;
         }
 
@@ -281,34 +286,34 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     // success
     if (!adj_matrix_ptr)
     {
-        free(capital_buf);
+        FREE_SAFER(capital_buf);
         fclose(fp);
         return 0;
     }
    
-    *adj_matrix_ptr = (int**)calloc(city_cnt_temp, sizeof(unsigned int*));
+    *adj_matrix_ptr = (int**)calloc(city_cnt_temp, sizeof(int*));
     if (!(*adj_matrix_ptr))
     {
         fprintf(stderr, "calloc() failed (%s): %s:%d\n", strerror(errno), __func__, __LINE__);
         fclose(fp);
-        free(capital_buf);
-        free(*city_info_ptr);
+        FREE_SAFER(capital_buf);
+        FREE_SAFER(*city_info_ptr);
         return 1;
     }
 
     for (i = 0; i < city_cnt_temp; i++)
     {
-        (*adj_matrix_ptr)[i] = (int*)calloc(city_cnt_temp, sizeof(unsigned int));
+        (*adj_matrix_ptr)[i] = (int*)calloc(city_cnt_temp, sizeof(int));
         if (!(*adj_matrix_ptr)[i])
         {
             fprintf(stderr, "calloc() failed (%s): %s:%d\n", strerror(errno), __func__, __LINE__);
             for (j = 0; j < i; j++)
             {
-                free((*adj_matrix_ptr)[j]);
+                FREE_SAFER((*adj_matrix_ptr)[j]);
             }
-            free(*adj_matrix_ptr);
-            free(*city_info_ptr);
-            free(capital_buf);
+            FREE_SAFER(*adj_matrix_ptr);
+            FREE_SAFER(*city_info_ptr);
+            FREE_SAFER(capital_buf);
             fclose(fp);
             return 1;
         }
@@ -347,6 +352,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (v1 < 0 || v1 >= city_cnt_temp || v2 < 0 || v2 >= city_cnt_temp || w <= 0)
         {
+            fprintf(stderr, "Invalid edge value (%d, %d): %s:%d\n", v1, v2, __func__, __LINE__);
             continue;
         }
 
@@ -362,7 +368,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         fprintf(stderr, "Warning: Wrong edge count: %d(%d expected), %s:%d\n", cnt, edge_cnt, __func__, __LINE__);
     }
 
-    free(capital_buf);
+    FREE_SAFER(capital_buf);
 
     fclose(fp);
     return 0;
@@ -480,7 +486,6 @@ int dequeue(event_queue* queue, event_node* output)
     
     if (!queue->head)
     {
-        fprintf(stderr, "The queue is empty: %s:%d\n", __func__, __LINE__);
         return -1;
     }
     
@@ -499,7 +504,7 @@ int dequeue(event_queue* queue, event_node* output)
         output->next = NULL;
     }
 
-    free(temp);
+    FREE_SAFER(temp);
     
     return 0;
 }
@@ -518,7 +523,7 @@ void free_queue(event_queue* queue)
     {
         temp = queue->head;
         queue->head = queue->head->next;
-        free(temp);
+        FREE_SAFER(temp);
     }
     queue->tail = NULL;
 }

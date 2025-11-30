@@ -125,12 +125,6 @@ int main(void)
     signal(SIGINT, sig_handler);
     srand(time(NULL));
 
-    if (0 != get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt))
-    {
-        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
-        return 1;
-    }
-
     dist_list = (int*)malloc(city_cnt * sizeof(int));
     if (!dist_list)
     {
@@ -142,6 +136,7 @@ int main(void)
     if (!visited)
     {
         fprintf(stderr, "malloc() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(dist_list);
         return 1;
     }
 
@@ -149,6 +144,8 @@ int main(void)
     if (sock < 3)
     {
         fprintf(stderr, "socket() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(dist_list);
+        FREE_SAFER(visited);
         return 1;
     }
 
@@ -159,6 +156,17 @@ int main(void)
     if (-1 == bind(sock, &serv_addr, sizeof(serv_addr)))
     {
         fprintf(stderr, "bind() error (%s), %s:%d\n", strerror(errno), __func__, __LINE__);
+        FREE_SAFER(dist_list);
+        FREE_SAFER(visited);
+        close(sock);
+        return 1;
+    }
+    
+    if (0 != get_info_from_file(FILENAME, &city_info, &city_cnt, &adj_matrix, &capitals, &capital_cnt))
+    {
+        fprintf(stderr, "Failed to read data from the file, %s:%d\n", __func__, __LINE__);
+        FREE_SAFER(dist_list);
+        FREE_SAFER(visited);
         close(sock);
         return 1;
     }
@@ -184,8 +192,15 @@ int main(void)
         {
         case MSG_TELEMETRIA:
             printf("[TELEMETRIA RECEBIDA]\nTotal de cidades monitoradas: %d\n", telemetria_ptr->total);
-            update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
             
+            if (telemetria_ptr->total > city_cnt)
+            {
+                update_info_cidade(telemetria_ptr->dados, city_info, city_cnt);
+            }
+            else
+            {
+                update_info_cidade(telemetria_ptr->dados, city_info, telemetria_ptr->total);
+            }
             for (i = 0; i < city_cnt; ++i)
             {
                 if (city_info[i].status == ALERTA)
@@ -279,14 +294,15 @@ int main(void)
     }
 
     close(sock);
-    free(visited);
-    free(dist_list);
-    free(city_info);
+    FREE_SAFER(visited);
+    FREE_SAFER(dist_list);
+    FREE_SAFER(city_info);
+    FREE_SAFER(capitals);
     for (i = 0; i < city_cnt; i++)
     {
-        free(adj_matrix[i]);
+        FREE_SAFER(adj_matrix[i]);
     }
-    free(adj_matrix);
+    FREE_SAFER(adj_matrix);
 
     return 0;
 }
