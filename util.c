@@ -165,20 +165,20 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (!type_start)
         {
-            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of '%s'. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1, filename);
             continue;
         }
         
         if (!is_valid_int(type_start + 1))
         {
-            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of '%s'. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1, filename);
             continue;
         }
         type = atoi(type_start + 1);
 
         if (type > 1 || type < 0)
         {
-            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of '%s'. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1, filename);
             continue;
         }
 
@@ -207,7 +207,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (id < 0 || id >= city_cnt_temp)
         {
-            fprintf(stderr, "Invalid city ID: %d, line %d of the file, %s:%d\n", id, cnt + 1, __func__, __LINE__);
+            fprintf(stderr, "Invalid city ID: %d, line %d of '%s', %s:%d\n", id, cnt + 1, filename, __func__, __LINE__);
             fclose(fp);
             FREE_SAFER(*city_info_ptr);
             FREE_SAFER(capital_buf);
@@ -216,7 +216,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if ((*city_info_ptr)[id].id_cidade != -1)
         {
-            fprintf(stderr, "City ID duplicated: %d, line %d of the file, %s:%d\n", id, cnt + 1, __func__, __LINE__);
+            fprintf(stderr, "City ID duplicated: %d, line %d of '%s', %s:%d\n", id, cnt + 1, filename, __func__, __LINE__);
             fclose(fp);
             FREE_SAFER(*city_info_ptr);
             FREE_SAFER(capital_buf);
@@ -350,7 +350,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (!(is_valid_int(v1_ptr) && is_valid_int(v2_ptr) && is_valid_int(w_ptr)))
         {
-            fprintf(stderr, "Input value have to be positive integer. Your input: %s %s %s. line %d of the file\n", v1_ptr, v2_ptr, w_ptr, city_cnt_temp + cnt + 1);
+            fprintf(stderr, "Input value have to be positive integer. Your input: %s %s %s. line %d of '%s'\n", v1_ptr, v2_ptr, w_ptr, city_cnt_temp + cnt + 1, filename);
             continue;
         } 
         
@@ -360,7 +360,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (v1 < 0 || v1 >= city_cnt_temp || v2 < 0 || v2 >= city_cnt_temp || w <= 0)
         {
-            fprintf(stderr, "Invalid edge value (%d, %d): line %d of the file\n", v1, v2, city_cnt_temp + cnt + 1);
+            fprintf(stderr, "Invalid edge value (%d, %d): line %d of '%s'\n", v1, v2, city_cnt_temp + cnt + 1, filename);
             continue;
         }
 
