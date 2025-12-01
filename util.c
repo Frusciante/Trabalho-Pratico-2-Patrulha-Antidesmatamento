@@ -144,16 +144,15 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
     {
         type_start = NULL;
         name_start = NULL;
-        ++cnt;
         remove_whitespace(buffer);
         len = strlen(buffer);
 
         if (len == 0 || *buffer == '#')
         {
-            --cnt;
             continue;
         }
-        
+
+        ++cnt;
         // First, split city type from the back.
         while (len-- > 0)
         {
