@@ -166,20 +166,20 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (!type_start)
         {
-            fprintf(stderr, "Invalid format: %s, line %d. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
             continue;
         }
         
         if (!is_valid_int(type_start + 1))
         {
-            fprintf(stderr, "Invalid format: %s, line %d. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
             continue;
         }
         type = atoi(type_start + 1);
 
         if (type > 1 || type < 0)
         {
-            fprintf(stderr, "Invalid format: %s, line %d. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
+            fprintf(stderr, "Invalid format: %s, line %d of the file. Format should be '<ID(positive int)> <City Name(string)> <Type(0 or 1)>'.\n", buffer, cnt + 1);
             continue;
         }
 
