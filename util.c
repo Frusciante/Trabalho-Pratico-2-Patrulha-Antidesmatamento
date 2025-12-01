@@ -350,7 +350,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (!(is_valid_int(v1_ptr) && is_valid_int(v2_ptr) && is_valid_int(w_ptr)))
         {
-            fprintf(stderr, "Input value have to be positive integer. Your input: %s %s %s. line %d of '%s'\n", v1_ptr, v2_ptr, w_ptr, city_cnt_temp + cnt + 1, filename);
+            fprintf(stderr, "Input values have to be positive integer. Your input: %s %s %s. line %d of '%s'\n", v1_ptr, v2_ptr, w_ptr, city_cnt_temp + cnt + 1, filename);
             continue;
         } 
         
@@ -360,7 +360,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
 
         if (v1 < 0 || v1 >= city_cnt_temp || v2 < 0 || v2 >= city_cnt_temp || w <= 0)
         {
-            fprintf(stderr, "Invalid edge value (%d, %d): line %d of '%s'\n", v1, v2, city_cnt_temp + cnt + 1, filename);
+            fprintf(stderr, "Input values have to be positive integer. Your input: %s %s %s. line %d of '%s'\n", v1_ptr, v2_ptr, w_ptr, city_cnt_temp + cnt + 1, filename);
             continue;
         }
 
