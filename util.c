@@ -148,7 +148,7 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
         remove_whitespace(buffer);
         len = strlen(buffer);
 
-        if (len == 0)
+        if (len == 0 || *buffer == '#')
         {
             --cnt;
             continue;
