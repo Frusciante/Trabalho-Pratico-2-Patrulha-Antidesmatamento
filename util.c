@@ -231,16 +231,17 @@ int get_info_from_file(const char* const filename, info_cidade_t** city_info_ptr
             continue;
         }
 
+        // capital counting
         (*city_info_ptr)[id].id_cidade = id;
         if (type == 1)
         {
-            (*city_info_ptr)[id].drone_disponivel = 1;
+            (*city_info_ptr)[id].drone_disponivel = IS_FREE;
             capital_buf[capital_cnt] = id;
             capital_cnt++;
         }
         else
         {
-            (*city_info_ptr)[id].drone_disponivel = -1;
+            (*city_info_ptr)[id].drone_disponivel = IS_NOT_CAPITAL;
         }
     }
     
@@ -385,7 +386,7 @@ int sendto_with_retry(int sock, const void* buf, size_t len, struct sockaddr* ad
     struct timespec ts = {};
     int check_timeout;
     
-    if (!(buf && addr && cond && mutex && ack_flag))
+    if (!(buf && addr && cond && mutex && ack_flag && is_running_ptr))
     {
         fprintf(stderr, "Wrong parameter : %s:%d\n", __func__, __LINE__);
         return 0;
@@ -425,6 +426,11 @@ void sleep_to_be_awaken(int secs, int* is_running_ptr, pthread_mutex_t* mutex,  
 {
     struct timespec ts;
     int result;
+    
+    if (!is_running_ptr)
+    {
+        return;
+    }
 
     clock_gettime(CLOCK_REALTIME, &ts);
     ts.tv_sec += secs;

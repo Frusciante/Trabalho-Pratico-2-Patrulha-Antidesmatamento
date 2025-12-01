@@ -46,9 +46,16 @@ typedef enum
 
 typedef enum 
 {
-    OK,
+    NORMAL,
     ALERTA
 } telemetria_status_e;
+
+typedef enum
+{
+    IS_NOT_CAPITAL = -1,
+    IS_NOT_AVAILABLE,
+    IS_FREE
+} city_status_e;
 
 typedef struct
 {

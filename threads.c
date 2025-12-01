@@ -31,7 +31,7 @@ void* thread_monitoring_simulator(void* arg)
         pthread_mutex_lock(&city_info_mutex); 
         for (i = 0; i < city_cnt; ++i)     
         {
-            city_info[i].status = (rand() % 100 < 3) ? ALERTA : OK;
+            city_info[i].status = (rand() % 100 < 3) ? ALERTA : NORMAL;
         }
         is_telemetry_ready = 1;
         pthread_cond_signal(&telemetry_cond);

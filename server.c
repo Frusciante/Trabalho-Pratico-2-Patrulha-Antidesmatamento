@@ -291,7 +291,7 @@ int main(void)
                         {
                             printf("[ACK RECEBIDO]\nCliente confirmou recebimento de ordem de drone para %s\n", city_info[i].nome_cidade);
                             city_info[i].equipe_atuando = 1;
-                            city_info[min_idx].drone_disponivel = 0;
+                            city_info[min_idx].drone_disponivel = IS_NOT_AVAILABLE;
                         }
                     }
                 }
@@ -299,7 +299,7 @@ int main(void)
             break;
         case MSG_CONCLUSAO:
             city_info[conclusao_ptr->id_cidade].equipe_atuando = 0;
-            city_info[conclusao_ptr->id_equipe].drone_disponivel = 1;
+            city_info[conclusao_ptr->id_equipe].drone_disponivel = IS_FREE;
             puts("MISSÃO CONCLUÍDA");
             total_size = sizeof(header_t) + sizeof(payload_ack_t);
             header_ptr_send->tamanho = (ssize_t)(sizeof(payload_ack_t));
